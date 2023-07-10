@@ -2,7 +2,6 @@ mod screenshots_module;
 
 use std::path::PathBuf;
 use image::ImageFormat;
-use screenshots_module::screenshot_module;
 use crate::screenshots_module::screenshot_module::Screenshot;
 
 fn main() {

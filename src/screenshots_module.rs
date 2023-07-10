@@ -1,9 +1,8 @@
 pub mod screenshot_module{
     use std::error::Error;
     use std::path::{PathBuf};
-    use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
+    use image::{DynamicImage, ImageFormat, RgbaImage};
     use screenshots::{Screen};
-    use show_image::create_window;
 
     pub struct Screenshot {
         screenshot:DynamicImage,
@@ -16,7 +15,7 @@ pub mod screenshot_module{
             let image_rgba=image_captured.rgba().to_owned();
             let rgba_image=RgbaImage::from_raw(width,height,image_rgba).unwrap();
             let image_obj=DynamicImage::from(rgba_image);
-            Result::Ok(
+            Ok(
                 Screenshot{
                     screenshot:image_obj,
                 }
