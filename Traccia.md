@@ -25,3 +25,5 @@ in one or more formats.
 # Libraries
 ### Image processing
 https://crates.io/crates/image
+https://crates.io/crates/show-image
+https://crates.io/crates/screenshots
