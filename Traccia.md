@@ -9,22 +9,25 @@ in one or more formats.
     The utility should have an intuitive and user-friendly interface that allows users to easily navigate through the application's features.
 3. ### Selection Options
     The utility should allow the user to restrict the grabbed image to a custom area selected with a click and drag motion. The selected area may be further adjusted with subsequent interactions.
-4. ### Hotkey Support
+4. ### Hotkey Support 
    The utility should support customizable hotkeys for quick screen grabbing. Users should be able to set up their preferred shortcut keys.
-5. ### Output Format
+5. ### Output Format [DONE]
    The utility should support multiple output formats including .png, .jpg, .gif. It should also support copying the screen grab to the clipboard. 
 ## As a bonus, the application may also provide the following features:
 6. ### Annotation Tools
     The utility should have built-in annotation tools like shapes, arrows, text, and a color picker for highlighting or redacting parts of the screen grab.
-7. ### Delay Timer
+7. ### Delay Timer [DONE]
     The utility should support a delay timer function, allowing users to set up a screen grab after a specified delay.
-8. ### Save Options
+8. ### Save Options [DONE]
     The utility should allow users to specify the default save location for screen grabs. It should also support automatic saving with predefined naming conventions.
-9. ### Multi-monitor Support
+9. ### Multi-monitor Support [DONE]
     The utility should be able to recognize and handle multiple monitors independently, allowing users to grab screens from any of the connected displays
 # Libraries
 ### Image processing
-https://crates.io/crates/image
-https://crates.io/crates/show-image
-https://crates.io/crates/screenshots
-https://docs.rs/hotkey/latest/hotkey/
+[image](https://crates.io/crates/image)
+
+[show-image](https://crates.io/crates/show-image)
+
+[screenshots](https://crates.io/crates/screenshots)
+
+[hotkey](https://docs.rs/hotkey/latest/hotkey/)

@@ -2,8 +2,10 @@ pub mod screenshot_module{
     use std::borrow::Cow;
     use std::error::Error;
     use std::path::{PathBuf};
+    use std::thread;
+    use std::time::Duration;
     use arboard::{Clipboard, ImageData};
-    use chrono::Local;
+    use chrono::{Local};
     use image::{DynamicImage, ImageFormat, RgbaImage};
     use screenshots::{Screen};
     use thiserror::Error;
@@ -34,13 +36,13 @@ pub mod screenshot_module{
                 }
             )
         }
-        pub fn save_image(&self,path:PathBuf,format:ImageFormat)->Result<(),Box<dyn Error>>{
+        pub fn save_image(&self,path:&PathBuf,format:ImageFormat)->Result<(),Box<dyn Error>>{
             if path.is_dir()==false {
                 return Err(Box::new(ScreenShotError::PathError))
             }
-            let mut string_path_with_file_name ="screenshot-".to_string();
-            string_path_with_file_name.push_str(Local::now().format("%d-%m-%Y-%H-%M-%S_%3f").to_string().as_str());
-            let mut path_with_file_name =path.join(PathBuf::from(string_path_with_file_name));
+            let mut file_name ="screenshot-".to_string();
+            file_name.push_str(Local::now().format("%d-%m-%Y-%H-%M-%S_%3f").to_string().as_str());
+            let mut path_with_file_name =path.join(PathBuf::from(file_name));
             match format {
                 ImageFormat::Png=>{
                     path_with_file_name = path_with_file_name.with_extension(PathBuf::from("png"));
@@ -59,7 +61,7 @@ pub mod screenshot_module{
             return Ok(());
         }
         pub fn save_to_clipboard(&self)->Result<(),Box<dyn Error>>{
-            let mut clipboard=Clipboard::new().unwrap();
+            let mut clipboard=Clipboard::new()?;
             clipboard.set_image(ImageData{
                 width: self.screenshot.width() as usize,
                 height: self.screenshot.height() as usize,
@@ -68,7 +70,7 @@ pub mod screenshot_module{
             Ok(())
         }
         pub fn resize_image(&mut self, x:u32, y:u32, height: u32, width: u32) -> Result<(),Box<dyn Error>>{
-            if self.screenshot.width()<(x+width)||self.screenshot.height()<(y+width) {
+            if self.screenshot.width()<(x+width)||self.screenshot.height()<(y+height) {
                 return Err(Box::new(ScreenShotError::ResizeSize));
             }
             self.screenshot=self.screenshot.crop(x,y,width,height);
@@ -87,6 +89,10 @@ pub mod screenshot_module{
         pub fn rotate_dx_90(&mut self)->Result<(),Box<dyn Error>>{
             self.screenshot=self.screenshot.rotate270();
             Ok(())
+        }
+        pub fn screenshot_after_delay(duration:Duration, screen:Screen) -> Result<Screenshot, Box<dyn Error>> {
+            thread::sleep(duration);
+            Screenshot::new(screen)
         }
     }
 }
