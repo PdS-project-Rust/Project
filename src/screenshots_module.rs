@@ -1,6 +1,8 @@
 pub mod screenshot_module{
+    use std::borrow::Cow;
     use std::error::Error;
     use std::path::{PathBuf};
+    use arboard::{Clipboard, ImageData};
     use chrono::Local;
     use image::{DynamicImage, ImageFormat, RgbaImage};
     use screenshots::{Screen};
@@ -55,6 +57,15 @@ pub mod screenshot_module{
             }
             self.screenshot.save_with_format(path_with_file_name, format)?;
             return Ok(());
+        }
+        pub fn save_to_clipboard(&self)->Result<(),Box<dyn Error>>{
+            let mut clipboard=Clipboard::new().unwrap();
+            clipboard.set_image(ImageData{
+                width: self.screenshot.width() as usize,
+                height: self.screenshot.height() as usize,
+                bytes: Cow::from(self.screenshot.as_bytes()),
+            })?;
+            Ok(())
         }
         pub fn resize_image(&mut self, x:u32, y:u32, height: u32, width: u32) -> Result<(),Box<dyn Error>>{
             if self.screenshot.width()<(x+width)||self.screenshot.height()<(y+width) {
