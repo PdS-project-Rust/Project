@@ -27,3 +27,4 @@ in one or more formats.
 https://crates.io/crates/image
 https://crates.io/crates/show-image
 https://crates.io/crates/screenshots
+https://docs.rs/hotkey/latest/hotkey/

@@ -6,13 +6,11 @@ use crate::screenshots_module::screenshot_module::Screenshot;
 
 fn main() {
     let screens=screenshots::Screen::all().unwrap();
-    let mut count=0;
     for i in screens{
-        let ss=Screenshot::new(i).unwrap();
-        let mut path=r"C:\Users\miche\Downloads\ProgettoRustProvaImage".to_string();
-        path.push_str(count.to_string().as_mut_str());
-        path.push_str(".png".to_string().as_str());
-        count+=1;
-        ss.save_image(PathBuf::from(path),ImageFormat::Png).unwrap();
+        let mut ss=Screenshot::new(i).unwrap();
+        let path=PathBuf::from(r"C:\Users\miche\Downloads".to_string());
+        ss.resize_image(0,0,ss.get_height().unwrap()/2,ss.get_width().unwrap()/2).unwrap();
+        ss.rotate_dx_90().unwrap();
+        ss.save_image(path,ImageFormat::Jpeg).unwrap();
     }
 }
