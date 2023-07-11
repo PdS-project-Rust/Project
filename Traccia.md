@@ -30,4 +30,4 @@ in one or more formats.
 
 [screenshots](https://crates.io/crates/screenshots)
 
-[hotkey](https://docs.rs/hotkey/latest/hotkey/)
+[hotkey](https://docs.rs/tauri-hotkey/0.1.2/tauri_hotkey/)

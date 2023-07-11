@@ -9,7 +9,7 @@ pub mod screenshot_module{
     use image::{DynamicImage, ImageFormat, RgbaImage};
     use screenshots::{Screen};
     use thiserror::Error;
-
+    
     #[derive(Error,Debug)]
     enum ScreenShotError{
         #[error("sizes are not compatible")]
