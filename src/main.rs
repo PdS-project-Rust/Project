@@ -3,12 +3,9 @@ use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 use image::ImageFormat;
+use livesplit_hotkey::{Hook, Hotkey, KeyCode, Modifiers};
 use screenshots::Screen;
-use crate::hotkey_module::hotkey_module::Hotkey;
 use crate::screenshots_module::screenshot_module::Screenshot;
-mod hotkey_module;
-use tauri_hotkey::{Hotkey as Tauri_Hotkey, Key, Modifier};
-use tauri_hotkey::Key::KEY_0;
 
 fn main() {
     let screens=Screen::all().unwrap();
@@ -23,14 +20,13 @@ fn main() {
     }
     let ss1=Screenshot::screenshot_after_delay(Duration::from_secs(3),Screen::all().unwrap()[0]).unwrap();
     ss1.save_image(&path,ImageFormat::Jpeg).unwrap();
-    let mut hotkey=Hotkey::new().unwrap();
-    let mut vkeys=Vec::new();
-    let mut vmod=Vec::new();
-    vmod.push(Modifier::CTRL);
-    vkeys.push(Key::G);
-    hotkey.register_hotkey(Tauri_Hotkey{
-        modifiers:vmod,
-        keys:vkeys,
+    let a=Hook::new().unwrap();
+    let hk=Hotkey{
+        key_code:KeyCode::KeyA,
+        modifiers:Modifiers::CONTROL,
+    };
+    a.register(hk,||{
+        println!("ciao");
     }).unwrap();
     thread::sleep(Duration::from_secs(10));
 }

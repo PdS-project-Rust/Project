@@ -30,4 +30,6 @@ in one or more formats.
 
 [screenshots](https://crates.io/crates/screenshots)
 
-[hotkey](https://docs.rs/tauri-hotkey/0.1.2/tauri_hotkey/)
+[hotkey](https://docs.rs/livesplit-hotkey/0.7.0/x86_64-apple-darwin/livesplit_hotkey/index.html)
+
+[clipboard](https://docs.rs/arboard/latest/arboard/)
