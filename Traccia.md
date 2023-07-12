@@ -30,6 +30,6 @@ in one or more formats.
 
 [screenshots](https://crates.io/crates/screenshots)
 
-[hotkey](https://docs.rs/livesplit-hotkey/0.7.0/x86_64-apple-darwin/livesplit_hotkey/index.html)
+[hotkey](https://docs.rs/global-hotkey/0.2.3/global_hotkey/)
 
 [clipboard](https://docs.rs/arboard/latest/arboard/)

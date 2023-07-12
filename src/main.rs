@@ -2,9 +2,11 @@ mod screenshots_module;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
+use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager};
+use global_hotkey::hotkey::{Code, HotKey, Modifiers};
 use image::ImageFormat;
-use livesplit_hotkey::{Hook, Hotkey, KeyCode, Modifiers};
 use screenshots::Screen;
+use show_image::winit::event_loop::{ControlFlow, EventLoopBuilder};
 use crate::screenshots_module::screenshot_module::Screenshot;
 
 fn main() {
@@ -19,14 +21,20 @@ fn main() {
         ss.save_image(&path,ImageFormat::Jpeg).unwrap();
     }
     let ss1=Screenshot::screenshot_after_delay(Duration::from_secs(3),Screen::all().unwrap()[0]).unwrap();
-    ss1.save_image(&path,ImageFormat::Jpeg).unwrap();
-    let a=Hook::new().unwrap();
-    let hk=Hotkey{
-        key_code:KeyCode::KeyA,
-        modifiers:Modifiers::CONTROL,
-    };
-    a.register(hk,||{
-        println!("ciao");
-    }).unwrap();
-    thread::sleep(Duration::from_secs(10));
+    let event_loop=EventLoopBuilder::new().build();
+    let hotkeys_manager = GlobalHotKeyManager::new().unwrap();
+
+    let hotkey = HotKey::new(Some(Modifiers::SHIFT), Code::KeyD);
+
+    hotkeys_manager.register(hotkey).unwrap();
+
+    let global_hotkey_channel = GlobalHotKeyEvent::receiver();
+
+    event_loop.run(move |_event, _, control_flow| {
+        *control_flow = ControlFlow::Poll;
+
+        if let Ok(event) = global_hotkey_channel.try_recv() {
+            println!("{event:?}");
+        }
+    })
 }
