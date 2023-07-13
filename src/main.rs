@@ -1,9 +1,11 @@
 mod screenshots_module;
+mod hotkey_module;
+use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
-use std::thread;
 use std::time::Duration;
-use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager};
-use global_hotkey::hotkey::{Code, HotKey, Modifiers};
+use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyEventReceiver};
+use global_hotkey::hotkey::Code::KeyD;
+use global_hotkey::hotkey::Modifiers;
 use image::ImageFormat;
 use screenshots::Screen;
 use show_image::winit::event_loop::{ControlFlow, EventLoopBuilder};
@@ -22,19 +24,22 @@ fn main() {
     }
     let ss1=Screenshot::screenshot_after_delay(Duration::from_secs(3),Screen::all().unwrap()[0]).unwrap();
     let event_loop=EventLoopBuilder::new().build();
-    let hotkeys_manager = GlobalHotKeyManager::new().unwrap();
 
-    let hotkey = HotKey::new(Some(Modifiers::SHIFT), Code::KeyD);
+    //HOTKEY WRAPPER, SET THE HOTKEY AND REMOVE THE OLDER IF NEEDED
+    let mut hotkey_manager =HotkeyManager::new().unwrap();
+    let keyid=hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL), KeyD).unwrap();
 
-    hotkeys_manager.register(hotkey).unwrap();
 
+    //ADDING THE CALLBACK TO AN EVENT
     let global_hotkey_channel = GlobalHotKeyEvent::receiver();
+    GlobalHotKeyEvent::set_event_handler(Option::Some(move |event:GlobalHotKeyEvent|{
+        if keyid==event.id{
+            println!("{:?}",event);
+        }
+    }));
 
+    //EVENT LOOP HANDLER
     event_loop.run(move |_event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
-
-        if let Ok(event) = global_hotkey_channel.try_recv() {
-            println!("{event:?}");
-        }
     })
 }

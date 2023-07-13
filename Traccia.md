@@ -24,12 +24,33 @@ in one or more formats.
     The utility should be able to recognize and handle multiple monitors independently, allowing users to grab screens from any of the connected displays
 # Libraries
 ### Image processing
-[image](https://crates.io/crates/image)
 
-[show-image](https://crates.io/crates/show-image)
+[image](https://crates.io/crates/image)
 
 [screenshots](https://crates.io/crates/screenshots)
 
+### Hotkey support
+
+Event loop handler need to run on the main thread of the application
+
 [hotkey](https://docs.rs/global-hotkey/0.2.3/global_hotkey/)
 
+### clipboard management
+
 [clipboard](https://docs.rs/arboard/latest/arboard/)
+
+### Other
+
+Atm used only for the loop handler, probably useless when we will have a GUI
+
+https://github.com/tauri-apps
+
+[GUI maybe?](https://crates.io/crates/tauri)
+
+[show-image](https://crates.io/crates/show-image)
+
+# Possible structure
+Main thread: Event Loop + handler -> Required for making shortcuts works on linux+macOs
+
+Also the GUI probably will need an event loop, it's feasible to use a single event loop in the main thread for both hotkeys and GUI?
+If we can put everything together maybe we don't need to use multithreading
