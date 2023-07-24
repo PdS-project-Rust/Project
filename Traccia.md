@@ -22,6 +22,9 @@ in one or more formats.
     The utility should allow users to specify the default save location for screen grabs. It should also support automatic saving with predefined naming conventions.
 9. ### Multi-monitor Support [DONE]
     The utility should be able to recognize and handle multiple monitors independently, allowing users to grab screens from any of the connected displays
+## Other requirements
+10. ### Rotation [DONE]
+
 # Libraries
 ### Image processing
 

@@ -3,7 +3,7 @@ mod hotkey_module;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
 use std::time::Duration;
-use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyEventReceiver};
+use global_hotkey::{GlobalHotKeyEvent};
 use global_hotkey::hotkey::Code::KeyD;
 use global_hotkey::hotkey::Modifiers;
 use image::ImageFormat;
