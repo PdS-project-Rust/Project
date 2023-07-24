@@ -13,7 +13,7 @@ use crate::screenshots_module::screenshot_module::Screenshot;
 
 fn main() {
     let screens=Screen::all().unwrap();
-    let path=PathBuf::from(r"C:\Users\miche\Downloads".to_string());
+    let path=PathBuf::from(r"C:\Users\giuli\Downloads".to_string());
     for i in screens{
         let mut ss=Screenshot::new(i).unwrap();
         println!("{:?}",i.display_info);
