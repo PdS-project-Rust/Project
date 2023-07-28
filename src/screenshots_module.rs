@@ -6,7 +6,7 @@ pub mod screenshot_module{
     use std::time::Duration;
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
-    use image::{DynamicImage, ImageFormat, RgbaImage};
+    use image::{DynamicImage, ImageFormat, RgbaImage, ImageBuffer};
     use screenshots::Screen;
     use thiserror::Error;
     
@@ -74,11 +74,9 @@ pub mod screenshot_module{
             })?;
             Ok(())
         }
-        pub fn get_image(&self)->Result<Vec<u8>,Box<dyn Error>>{
-            let image_buffer = self.screenshot.to_rgba8();
-            Ok(image_buffer.to_vec())
+        pub fn get_image(&self)->Result<DynamicImage,Box<dyn Error>>{
+            Ok(self.screenshot.clone())
         }
-
         pub fn resize_image(&mut self, x:u32, y:u32, height: u32, width: u32) -> Result<(),Box<dyn Error>>{
             if self.screenshot.width()<(x+width)||self.screenshot.height()<(y+height) {
                 return Err(Box::new(ScreenShotError::ResizeSize));

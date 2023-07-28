@@ -2,7 +2,7 @@ mod screenshots_module;
 mod hotkey_module;
 mod api_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, Button, Color32, TextureId}, egui::{Window, ComboBox, TopBottomPanel}, epi::App, run_native, NativeOptions};
+use eframe::{egui::{CentralPanel, Layout, Align, Button}, egui::{Window, ComboBox, TopBottomPanel, self}, App, run_native, NativeOptions, epaint::ColorImage};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
@@ -20,7 +20,7 @@ struct ScreenshotStr {
     screenshot:Screenshot,
     path:PathBuf,
     format:ImageFormat,
-    texture:TextureId,
+    color_image:ColorImage,
     show_image:bool,
     show_dialog:bool
 }
@@ -33,7 +33,7 @@ impl Default for ScreenshotStr {
             screenshot:Screenshot::new_empty(),
             path:PathBuf::from(r"C:\Users\giuli\Downloads".to_string()),
             format:ImageFormat::Png,
-            texture:TextureId::default(),
+            color_image:ColorImage::example(),
             show_image:false,
             show_dialog:false
          }
@@ -41,37 +41,33 @@ impl Default for ScreenshotStr {
 }
 
 impl ScreenshotStr {
-
-    pub fn get_texture(&mut self, frame: &mut eframe::epi::Frame<'_>) -> () {
-        let pixels = self.screenshot.get_image().unwrap();
-        let h: usize = self.screenshot.get_height().unwrap() as usize;
-        let w: usize = self.screenshot.get_width().unwrap() as usize;
-        let size = (w, h);
-        let pixels: Vec<_> = pixels
-            .chunks_exact(4)
-            .map(|p| Color32::from_rgba_unmultiplied(p[0], p[1], p[2], p[3]))
-            .collect();
-
-        let texture = frame
-            .tex_allocator()
-            .alloc_srgba_premultiplied(size, &pixels);
-        self.texture = texture;
+    pub fn show_image(&self) -> () {
+        let image = self.screenshot.get_image().unwrap();
+        let size = [image.width() as _, image.height() as _];
+        let image_buffer = image.to_rgba8();
+        let pixels = image_buffer.as_flat_samples();
+        let col_im: ColorImage = ColorImage::from_rgba_unmultiplied(
+            size,
+            pixels.as_slice(),
+        );
 
     }
 }
-
 fn build_gui() -> () {
     //APP CONF
-    let app = ScreenshotStr::default();
-    let options = NativeOptions::default();
+    let options = NativeOptions {
+        initial_window_size: Some(egui::vec2(320.0, 240.0)),
+        ..Default::default()
+    };
     run_native(
-        Box::new(app),
+        "My egui App",
         options,
+        Box::new(|_cc| Box::<ScreenshotStr>::default()),
     );
 }
 
 impl App for ScreenshotStr {
-    fn update(&mut self, ctx: &eframe::egui::CtxRef, frame: &mut eframe::epi::Frame<'_>) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
 
         // test dialog
         if self.show_dialog {
@@ -103,7 +99,6 @@ impl App for ScreenshotStr {
                     
                     self.screenshot=api_mod::take_screenshot(duration,self.screen);
                     self.screenshot.save_image(&self.path,self.format).unwrap();
-                    self.get_texture(frame);
                     self.show_image=true;
                 }
 
@@ -158,10 +153,9 @@ impl App for ScreenshotStr {
         CentralPanel::default().show(ctx, |ui| {
             //Show screenshot here
             if self.show_image {
-                let texture = self.texture;
                 let available = ui.available_size();
+                //must go from color image to texture
                 ui.image(texture, available);
-                self.show_dialog=true;
                
             }
         });
@@ -175,14 +169,14 @@ impl App for ScreenshotStr {
                     // rotate left
                     if ui.button("Rotate Left").clicked() {
                         self.screenshot.rotate_dx_90().unwrap();
-                        self.get_texture(frame);
+
                         self.show_image=true;
                     }
     
                     // rotate right
                     if ui.button("Rotate Right").clicked() {
                         self.screenshot.rotate_sx_90().unwrap();
-                        self.get_texture(frame);
+   
                         self.show_image=true;
                     }
     
@@ -221,7 +215,7 @@ impl App for ScreenshotStr {
     
                     }
     
-                    // redoz
+                    // redo
                     if ui.button("Redo").clicked() {
     
                     }
@@ -231,11 +225,6 @@ impl App for ScreenshotStr {
             
         });
     }
-
-    fn name(&self) -> &str {
-        "Progetto PDS"
-    }
-
 }
 
 fn main() {
