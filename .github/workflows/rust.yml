@@ -1,8 +1,8 @@
 name: CI
 on:
   push:
-    tag:
-      - test
+    branches:
+      - '*'
 env:
   CARGO_TERM_COLOR: always
 jobs:

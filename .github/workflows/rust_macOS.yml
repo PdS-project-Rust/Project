@@ -1,8 +1,8 @@
 name: MacOS_CI
 on:
   push:
-    branch:
-      - master
+    branches:
+      - '*'
 env:
   CARGO_TERM_COLOR: always
 jobs:
