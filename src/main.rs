@@ -2,7 +2,7 @@ mod screenshots_module;
 mod hotkey_module;
 mod api_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, Button}, egui::{Window, ComboBox, TopBottomPanel, self}, App, run_native, NativeOptions, epaint::ColorImage};
+use eframe::{egui::{CentralPanel, Layout, Align, Button}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::ColorImage};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
@@ -14,6 +14,29 @@ use image::ImageFormat;
 use show_image::winit::event_loop::{ControlFlow, EventLoopBuilder};
 use crate::screenshots_module::screenshot_module::Screenshot;
 
+struct MyImage {
+    texture: Option<egui::TextureHandle>,
+}
+
+impl MyImage {
+    pub fn ui(&mut self, ui: &mut egui::Ui, image: ColorImage) {
+        let texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
+            // Load the texture only once.
+            ui.ctx().load_texture(
+                "my-image",
+                image,
+                Default::default()
+            )
+        });
+
+        // Show the image:
+        ui.image(texture, texture.size_vec2());
+    }
+
+    pub fn new() -> Self {
+        Self { texture: None }
+    }
+}
 struct ScreenshotStr {
     timer:usize,
     screen:usize,
@@ -21,8 +44,7 @@ struct ScreenshotStr {
     path:PathBuf,
     format:ImageFormat,
     color_image:ColorImage,
-    show_image:bool,
-    show_dialog:bool
+    show_image:bool
 }
 
 impl Default for ScreenshotStr {
@@ -34,14 +56,13 @@ impl Default for ScreenshotStr {
             path:PathBuf::from(r"C:\Users\giuli\Downloads".to_string()),
             format:ImageFormat::Png,
             color_image:ColorImage::example(),
-            show_image:false,
-            show_dialog:false
+            show_image:false
          }
     }
 }
 
 impl ScreenshotStr {
-    pub fn show_image(&self) -> () {
+    pub fn _convert_image(&mut self) -> () {
         let image = self.screenshot.get_image().unwrap();
         let size = [image.width() as _, image.height() as _];
         let image_buffer = image.to_rgba8();
@@ -50,6 +71,8 @@ impl ScreenshotStr {
             size,
             pixels.as_slice(),
         );
+        
+        self.color_image = col_im;
 
     }
 }
@@ -59,31 +82,17 @@ fn build_gui() -> () {
         initial_window_size: Some(egui::vec2(320.0, 240.0)),
         ..Default::default()
     };
-    run_native(
+
+    println!("Starting app");
+    eframe::run_native(
         "My egui App",
         options,
         Box::new(|_cc| Box::<ScreenshotStr>::default()),
-    );
+    ).unwrap();
 }
 
 impl App for ScreenshotStr {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-
-        // test dialog
-        if self.show_dialog {
-            Window::new("Screenshot")
-                .collapsible(false)
-                .resizable(false)
-                .show(ctx, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Screenshot taken!");
-                        ui.separator();
-                        if ui.button("Close").clicked() {
-                            self.show_dialog=false;
-                        }
-                    });
-                });
-        }
 
         // header of the app
         TopBottomPanel::top("header").show(ctx, |ui| {
@@ -92,13 +101,15 @@ impl App for ScreenshotStr {
 
             let timer_str = format!("{} Seconds", timer);
             let screen_str = format!("Screen {}", screen);
-
+            
             ui.horizontal(|ui| {
                 if ui.button("New Screenshot").clicked() {
                     let duration = Duration::from_secs(self.timer as u64);
-                    
+                    frame.set_visible(false);
                     self.screenshot=api_mod::take_screenshot(duration,self.screen);
+                    frame.set_visible(true);
                     self.screenshot.save_image(&self.path,self.format).unwrap();
+                    self._convert_image();   
                     self.show_image=true;
                 }
 
@@ -153,9 +164,8 @@ impl App for ScreenshotStr {
         CentralPanel::default().show(ctx, |ui| {
             //Show screenshot here
             if self.show_image {
-                let available = ui.available_size();
-                //must go from color image to texture
-                ui.image(texture, available);
+                let mut my_image = MyImage::new();
+                my_image.ui(ui, self.color_image.clone()); 
                
             }
         });
@@ -229,20 +239,7 @@ impl App for ScreenshotStr {
 
 fn main() {
 
-    //HOTKEYS
-    let event_loop=EventLoopBuilder::new().build();
-    let mut hotkey_manager =HotkeyManager::new().unwrap();
-    let keyid=hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL), KeyD).unwrap(); //OPEN APP
-
-    //ADDING THE CALLBACK TO AN EVENT
-    GlobalHotKeyEvent::set_event_handler(Option::Some(move |event:GlobalHotKeyEvent|{
-        if keyid==event.id{
-            build_gui();
-        }
-    }));
-
+    build_gui();
     //EVENT LOOP HANDLER
-    event_loop.run(move |_event, _, control_flow| {
-        *control_flow = ControlFlow::Poll;
-    });    
+ 
 }
