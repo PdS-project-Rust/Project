@@ -1,6 +1,6 @@
 pub mod hotkey_module{
     use std::error::Error;
-    use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyEventReceiver, GlobalHotKeyManager};
+    use global_hotkey::GlobalHotKeyManager;
     use global_hotkey::hotkey::{Code, HotKey, Modifiers};
     pub struct HotkeyManager{
         manager:GlobalHotKeyManager,

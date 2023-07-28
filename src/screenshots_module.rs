@@ -1,13 +1,13 @@
 pub mod screenshot_module{
     use std::borrow::Cow;
     use std::error::Error;
-    use std::path::{PathBuf};
+    use std::path::PathBuf;
     use std::thread;
     use std::time::Duration;
     use arboard::{Clipboard, ImageData};
-    use chrono::{Local};
+    use chrono::Local;
     use image::{DynamicImage, ImageFormat, RgbaImage};
-    use screenshots::{Screen};
+    use screenshots::Screen;
     use thiserror::Error;
     
     #[derive(Error,Debug)]
@@ -23,6 +23,11 @@ pub mod screenshot_module{
         screenshot:DynamicImage,
     }
     impl Screenshot {
+        pub fn new_empty() -> Screenshot {
+            Screenshot{
+                screenshot:DynamicImage::new_rgba8(0,0),
+            }
+        }
         pub fn new(screen:Screen) -> Result<Screenshot,Box<dyn Error>> {
             let image_captured=screen.capture()?;
             let width=image_captured.width();
@@ -69,6 +74,11 @@ pub mod screenshot_module{
             })?;
             Ok(())
         }
+        pub fn get_image(&self)->Result<Vec<u8>,Box<dyn Error>>{
+            let image_buffer = self.screenshot.to_rgba8();
+            Ok(image_buffer.to_vec())
+        }
+
         pub fn resize_image(&mut self, x:u32, y:u32, height: u32, width: u32) -> Result<(),Box<dyn Error>>{
             if self.screenshot.width()<(x+width)||self.screenshot.height()<(y+height) {
                 return Err(Box::new(ScreenShotError::ResizeSize));
