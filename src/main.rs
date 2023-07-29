@@ -11,9 +11,8 @@ use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Code::KeyD;
 use global_hotkey::hotkey::Modifiers;
 use image::ImageFormat;
-use show_image::winit::event_loop::{ControlFlow, EventLoopBuilder};
+use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
-
 struct MyImage {
     texture: Option<egui::TextureHandle>,
 }
@@ -53,7 +52,7 @@ impl Default for ScreenshotStr {
             timer:0,
             screen:0,
             screenshot:Screenshot::new_empty(),
-            path:PathBuf::from(r"C:\Users\giuli\Downloads".to_string()),
+            path:PathBuf::from(r"./".to_string()),
             format:ImageFormat::Png,
             color_image:ColorImage::example(),
             show_image:false
@@ -239,7 +238,20 @@ impl App for ScreenshotStr {
 
 fn main() {
 
-    build_gui();
+    //HOTKEYS
+    let event_loop = EventLoop::new();
+    let mut hotkey_manager =HotkeyManager::new().unwrap();
+    let keyid=hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL), KeyD).unwrap(); //OPEN APP
+
+    //ADDING THE CALLBACK TO AN EVENT
+    GlobalHotKeyEvent::set_event_handler(Option::Some(move |event:GlobalHotKeyEvent|{
+        if keyid==event.id{
+            build_gui();
+        }
+    }));
+
     //EVENT LOOP HANDLER
- 
+    event_loop.run(move |_event, _, control_flow| {
+        *control_flow = ControlFlow::Poll;
+    });
 }
