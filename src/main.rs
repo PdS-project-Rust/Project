@@ -43,28 +43,6 @@ impl MyImage {
         ui.image(texture, fixed_dimensions);
     }
 
-    pub fn ui_draw(&mut self, ui: &mut egui::Ui, image: ColorImage) {
-        let texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
-            // Load the texture only once.
-            ui.ctx().load_texture(
-                "my-image",
-                image.clone(),
-                Default::default()
-            )
-        });
-
-        let available = ui.available_size();
-        let w = image.width() as f32;
-        let h = image.height() as f32;
-        let w_window = available.x;
-        let h_window = available.y;
-        let height = h_window.min(w_window * h / w);
-        let width = height * w / h;
-        let fixed_dimensions = Vec2{x: width, y: height};
-        // Show the image:
-        ui.image(texture, fixed_dimensions);
-    }
-
     pub fn new() -> Self {
         Self { texture: None }
     }
@@ -164,7 +142,7 @@ impl App for ScreenshotStr {
                 let size = 10;
                 let color: [u8;4] = [255, 0, 0, 255];
                 ctx.input(|ui| {
-                    if ui.pointer.any_pressed() {
+                    if ui.pointer.any_down() {
                         self.screenshot.draw_point(x, y, size, color);
                     }
                 })
@@ -348,7 +326,7 @@ impl App for ScreenshotStr {
 
                         // draw
                         if ui.button("\u{270F}").clicked() {
-                            //self.drawing_mode = !self.drawing_mode;
+                            self.drawing_mode = !self.drawing_mode;
                             self.show_image=true;
                         }
 
