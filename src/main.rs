@@ -3,7 +3,7 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, CursorIcon}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
@@ -327,6 +327,10 @@ impl App for ScreenshotStr {
                         // draw
                         if ui.button("\u{270F}").clicked() {
                             self.drawing_mode = !self.drawing_mode;
+                            if self.drawing_mode {
+                                //set crosshair cursor
+                                ui.ctx().set_cursor_icon(CursorIcon::Crosshair);
+                            }
                             self.show_image=true;
                         }
 
