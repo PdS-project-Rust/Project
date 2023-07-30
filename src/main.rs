@@ -3,7 +3,7 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
@@ -21,7 +21,29 @@ struct MyImage {
 }
 
 impl MyImage {
-    pub fn ui(&mut self, ui: &mut egui::Ui, image: ColorImage) {
+    pub fn ui_resize(&mut self, ui: &mut egui::Ui, image: ColorImage) {
+        let texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
+            // Load the texture only once.
+            ui.ctx().load_texture(
+                "my-image",
+                image.clone(),
+                Default::default()
+            )
+        });
+
+        let available = ui.available_size();
+        let w = image.width() as f32;
+        let h = image.height() as f32;
+        let w_window = available.x;
+        let h_window = available.y;
+        let height = h_window.min(w_window * h / w);
+        let width = height * w / h;
+        let fixed_dimensions = Vec2{x: width, y: height};
+        // Show the image:
+        ui.image(texture, fixed_dimensions);
+    }
+
+    pub fn ui_draw(&mut self, ui: &mut egui::Ui, image: ColorImage) {
         let texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
             // Load the texture only once.
             ui.ctx().load_texture(
@@ -56,6 +78,7 @@ struct ScreenshotStr {
     color_image:ColorImage,
     show_image:bool,
     save_dialog:bool,
+    drawing_mode:bool,
     settings_dialog:bool,
     settings:Settings
 }
@@ -71,6 +94,7 @@ impl Default for ScreenshotStr {
             color_image:ColorImage::example(),
             show_image:false,
             save_dialog:false,
+            drawing_mode:false,
             settings_dialog:false,
             settings:Settings::default()
 
@@ -92,6 +116,25 @@ impl ScreenshotStr {
         self.color_image = col_im;
 
     }
+
+    fn calculate_texture_coordinates(&self, cursor_pos: Pos2, ctx: &egui::Context) -> Pos2 {
+        let available = ctx.available_rect(); // Get the available rectangle for drawing
+        let w = self.screenshot.get_width().unwrap() as f32;
+        let h = self.screenshot.get_height().unwrap() as f32;
+        let w_window = available.width();
+        let h_window = available.height();
+        let height = h_window.min(w_window * h / w);
+        let width = height * w / h;
+        let h_scale = height / h;
+        let w_scale = width / w;
+        let image_pos_x = (w_window - width) / 2.0;
+        let image_pos_y = (h_window - height) / 2.0;
+        let image_cursor_pos = Pos2 {
+            x: (cursor_pos.x - image_pos_x) / w_scale,
+            y: (cursor_pos.y - image_pos_y) / h_scale,
+        };
+        image_cursor_pos
+    }
 }
 fn build_gui() -> () {
     //APP CONF
@@ -111,41 +154,60 @@ fn build_gui() -> () {
 impl App for ScreenshotStr {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
 
-                // save dialog
-                if self.save_dialog {
-                    Window::new("Save Screenshot")
-                        .collapsible(false)
-                        .resizable(false)
-                        .show(ctx, |ui| {
-                            //close button 
-                            ui.horizontal(|ui| {
-                                ui.label("Save as?");
-                                if ui.button("PNG").clicked() {
-                                    self.format=ImageFormat::Png;
-                                    self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
-                                    self.save_dialog=false;
-                                }
-                                if ui.button("JPG").clicked() {
-                                    self.format=ImageFormat::Jpeg;
-                                    self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
-                                    self.save_dialog=false;
-                                }
-                                if ui.button("GIF").clicked() {
-                                    self.format=ImageFormat::Gif;
-                                    self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
-                                    self.save_dialog=false;
-                                }
-        
-                            });
-        
-                            //close
-                            ui.horizontal(|ui| {
-                                if ui.button("Cancel").clicked() {
-                                    self.save_dialog=false;
-                                }
-                            });
-                        });
-                }
+        // drawing
+        if self.drawing_mode {
+            ctx.input(|ui| {
+                let pos = ui.pointer.interact_pos().unwrap();
+                let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                let x = texture_coordinates.x as i32;
+                let y = texture_coordinates.y as i32;
+                let size = 10;
+                let color: [u8;4] = [255, 0, 0, 255];
+                ctx.input(|ui| {
+                    if ui.pointer.any_pressed() {
+                        self.screenshot.draw_point(x, y, size, color);
+                    }
+                })
+                
+            });
+            self._convert_image();
+            self.show_image = true;
+        }
+        // save dialog
+        if self.save_dialog {
+            Window::new("Save Screenshot")
+                .collapsible(false)
+                .resizable(false)
+                .show(ctx, |ui| {
+                    //close button 
+                    ui.horizontal(|ui| {
+                        ui.label("Save as?");
+                        if ui.button("PNG").clicked() {
+                            self.format=ImageFormat::Png;
+                            self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                            self.save_dialog=false;
+                        }
+                        if ui.button("JPG").clicked() {
+                            self.format=ImageFormat::Jpeg;
+                            self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                            self.save_dialog=false;
+                        }
+                        if ui.button("GIF").clicked() {
+                            self.format=ImageFormat::Gif;
+                            self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                            self.save_dialog=false;
+                        }
+
+                    });
+
+                    //close
+                    ui.horizontal(|ui| {
+                        if ui.button("Cancel").clicked() {
+                            self.save_dialog=false;
+                        }
+                    });
+                });
+        }
 
         // settings dialog
         if self.settings_dialog {
@@ -254,7 +316,7 @@ impl App for ScreenshotStr {
             ui.with_layout(Layout::centered_and_justified(Direction::TopDown), |ui| {
                 if self.show_image {
                     let mut my_image = MyImage::new();
-                    my_image.ui(ui, self.color_image.clone()); 
+                    my_image.ui_resize(ui, self.color_image.clone()); 
                    
                 }
             });

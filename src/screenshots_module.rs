@@ -81,9 +81,8 @@ pub mod screenshot_module{
             Ok(())
         }
 
-        pub fn get_image(&self)->Result<Vec<u8>,Box<dyn Error>>{
-            let image_buffer = self.screenshot.to_rgba8();
-            Ok(image_buffer.to_vec())
+        pub fn get_image(&self)->Result<DynamicImage,Box<dyn Error>>{
+            Ok(self.screenshot.clone())
         }
 
         pub fn resize_image(&mut self, x:u32, y:u32, height: u32, width: u32) -> Result<(),Box<dyn Error>>{
