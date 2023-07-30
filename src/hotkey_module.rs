@@ -10,7 +10,7 @@ pub mod hotkey_module{
         pub fn new()->Result<Self,Box<dyn Error>>{
             Ok(HotkeyManager{
                 manager:GlobalHotKeyManager::new()?,
-                present_key:Option::None,
+                present_key:None,
             })
         }
         pub fn register_new_hotkey(&mut self, modifier:Option<Modifiers>,key:Code)->Result<u32,Box<dyn Error>>{
@@ -19,7 +19,7 @@ pub mod hotkey_module{
             }
             let hk=HotKey::new(modifier,key);
             self.manager.register(hk)?;
-            self.present_key=Option::Some(hk);
+            self.present_key=Some(hk);
             Ok(hk.id())
         }
         pub fn clean_hotkey(&mut self)->Result<(),Box<dyn Error>>{

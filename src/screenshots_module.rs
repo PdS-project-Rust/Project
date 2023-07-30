@@ -6,10 +6,11 @@ pub mod screenshot_module{
     use std::time::Duration;
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
-    use image::{DynamicImage, ImageFormat, RgbaImage, ImageBuffer};
+    use eframe::egui::Pos2;
+    use image::{DynamicImage, GenericImage, ImageFormat, Rgba, RgbaImage, ImageBuffer};
     use screenshots::Screen;
     use thiserror::Error;
-    
+
     #[derive(Error,Debug)]
     enum ScreenShotError{
         #[error("sizes are not compatible")]
@@ -19,28 +20,32 @@ pub mod screenshot_module{
         #[error("extension error")]
         ExtensionError,
     }
+
     pub struct Screenshot {
-        screenshot:DynamicImage,
+        screenshot: DynamicImage,
     }
+
     impl Screenshot {
         pub fn new_empty() -> Screenshot {
             Screenshot{
-                screenshot:DynamicImage::new_rgba8(0,0),
+                screenshot: DynamicImage::new_rgba8(0,0),
             }
         }
+
         pub fn new(screen:Screen) -> Result<Screenshot,Box<dyn Error>> {
             let image_captured=screen.capture()?;
-            let width=image_captured.width();
-            let height=image_captured.height();
+            let width= image_captured.width();
+            let height= image_captured.height();
             let image_rgba=image_captured.rgba().to_owned();
             let rgba_image=RgbaImage::from_raw(width,height,image_rgba).unwrap();
             let image_obj=DynamicImage::from(rgba_image);
             Ok(
                 Screenshot{
-                    screenshot:image_obj,
+                    screenshot: image_obj,
                 }
             )
         }
+
         pub fn save_image(&self,path:&PathBuf,format:ImageFormat)->Result<(),Box<dyn Error>>{
             if path.is_dir()==false {
                 return Err(Box::new(ScreenShotError::PathError))
@@ -65,6 +70,7 @@ pub mod screenshot_module{
             self.screenshot.save_with_format(path_with_file_name, format)?;
             return Ok(());
         }
+
         pub fn save_to_clipboard(&self)->Result<(),Box<dyn Error>>{
             let mut clipboard=Clipboard::new()?;
             clipboard.set_image(ImageData{
@@ -74,9 +80,12 @@ pub mod screenshot_module{
             })?;
             Ok(())
         }
-        pub fn get_image(&self)->Result<DynamicImage,Box<dyn Error>>{
-            Ok(self.screenshot.clone())
+
+        pub fn get_image(&self)->Result<Vec<u8>,Box<dyn Error>>{
+            let image_buffer = self.screenshot.to_rgba8();
+            Ok(image_buffer.to_vec())
         }
+
         pub fn resize_image(&mut self, x:u32, y:u32, height: u32, width: u32) -> Result<(),Box<dyn Error>>{
             if self.screenshot.width()<(x+width)||self.screenshot.height()<(y+height) {
                 return Err(Box::new(ScreenShotError::ResizeSize));
@@ -87,9 +96,11 @@ pub mod screenshot_module{
         pub fn get_width(&self)->Result<u32,Box<dyn Error>>{
             return Ok(self.screenshot.width());
         }
+
         pub fn get_height(&self)->Result<u32,Box<dyn Error>>{
             return Ok(self.screenshot.height());
         }
+
         pub fn rotate_sx_90(&mut self)->Result<(),Box<dyn Error>>{
             self.screenshot=self.screenshot.rotate90();
             Ok(())
@@ -98,9 +109,39 @@ pub mod screenshot_module{
             self.screenshot=self.screenshot.rotate270();
             Ok(())
         }
+
         pub fn screenshot_after_delay(duration:Duration, screen:Screen) -> Result<Screenshot, Box<dyn Error>> {
             thread::sleep(duration);
             Screenshot::new(screen)
         }
+
+        pub fn draw_point(&mut self, x: i32, y: i32, r: u32, color: [u8;4]) {
+            let width = self.screenshot.width() as i32;
+            let height = self.screenshot.height() as i32;
+            let r = r as i32;
+            if x > 0 && x < width && y > 0 && y < height {
+                // println!("{}{}",x,y);
+                for i in (x - r)..=(x + r) {
+                    for j in (y - r)..=(y + r) {
+                        // Full circles
+                        if ((x-i)*(x-i) + (y-j)*(y-j)) <= r {
+                            if i >= 0 && i < width && j >= 0 && j < height {
+                                let color_pixel = Rgba(color);
+                                self.screenshot.put_pixel(i as u32, j as u32, color_pixel);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        pub fn draw_curve(&mut self, pixels: &[Pos2], r: u32, color: [u8; 4]) {
+            for point in pixels {
+                let x = point.x as i32;
+                let y = point.y as i32;
+                self.draw_point(x, y, r, color);
+            }
+        }
+
     }
 }
