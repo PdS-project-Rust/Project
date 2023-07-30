@@ -16,7 +16,7 @@ pub mod settings_module {
             Settings {
                 open: String::from("D"),
                 quick: String::from("F"),
-                path: String::from("./screenshot/")
+                path: String::from("./")
             }
         }
     }

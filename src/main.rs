@@ -13,7 +13,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::ImageFormat;
+use image::{EncodableLayout, ImageFormat};
 use imageproc::drawing::draw_antialiased_line_segment_mut;
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
@@ -91,10 +91,9 @@ impl ScreenshotStr {
         let image = self.screenshot.get_image().unwrap();
         let size = [image.width() as _, image.height() as _];
         let image_buffer = image.to_rgba8();
-        let pixels = image_buffer.as_flat_samples();
         let col_im: ColorImage = ColorImage::from_rgba_unmultiplied(
             size,
-            pixels.as_slice(),
+            image_buffer.as_bytes()
         );
         
         self.color_image = col_im;
