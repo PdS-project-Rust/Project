@@ -1,8 +1,9 @@
 mod screenshots_module;
 mod hotkey_module;
 mod api_module;
+mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, Button}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::ColorImage};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
@@ -13,6 +14,8 @@ use global_hotkey::hotkey::Modifiers;
 use image::ImageFormat;
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
+use crate::settings_module::settings_module::*;
+
 struct MyImage {
     texture: Option<egui::TextureHandle>,
 }
@@ -23,13 +26,21 @@ impl MyImage {
             // Load the texture only once.
             ui.ctx().load_texture(
                 "my-image",
-                image,
+                image.clone(),
                 Default::default()
             )
         });
 
+        let available = ui.available_size();
+        let w = image.width() as f32;
+        let h = image.height() as f32;
+        let w_window = available.x;
+        let h_window = available.y;
+        let height = h_window.min(w_window * h / w);
+        let width = height * w / h;
+        let fixed_dimensions = Vec2{x: width, y: height};
         // Show the image:
-        ui.image(texture, texture.size_vec2());
+        ui.image(texture, fixed_dimensions);
     }
 
     pub fn new() -> Self {
@@ -43,7 +54,10 @@ struct ScreenshotStr {
     path:PathBuf,
     format:ImageFormat,
     color_image:ColorImage,
-    show_image:bool
+    show_image:bool,
+    save_dialog:bool,
+    settings_dialog:bool,
+    settings:Settings
 }
 
 impl Default for ScreenshotStr {
@@ -55,7 +69,11 @@ impl Default for ScreenshotStr {
             path:PathBuf::from(r"./".to_string()),
             format:ImageFormat::Png,
             color_image:ColorImage::example(),
-            show_image:false
+            show_image:false,
+            save_dialog:false,
+            settings_dialog:false,
+            settings:Settings::default()
+
          }
     }
 }
@@ -93,6 +111,78 @@ fn build_gui() -> () {
 impl App for ScreenshotStr {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
 
+                // save dialog
+                if self.save_dialog {
+                    Window::new("Save Screenshot")
+                        .collapsible(false)
+                        .resizable(false)
+                        .show(ctx, |ui| {
+                            //close button 
+                            ui.horizontal(|ui| {
+                                ui.label("Save as?");
+                                if ui.button("PNG").clicked() {
+                                    self.format=ImageFormat::Png;
+                                    self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                                    self.save_dialog=false;
+                                }
+                                if ui.button("JPG").clicked() {
+                                    self.format=ImageFormat::Jpeg;
+                                    self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                                    self.save_dialog=false;
+                                }
+                                if ui.button("GIF").clicked() {
+                                    self.format=ImageFormat::Gif;
+                                    self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                                    self.save_dialog=false;
+                                }
+        
+                            });
+        
+                            //close
+                            ui.horizontal(|ui| {
+                                if ui.button("Cancel").clicked() {
+                                    self.save_dialog=false;
+                                }
+                            });
+                        });
+                }
+
+        // settings dialog
+        if self.settings_dialog {
+            Window::new("Settings")
+                .collapsible(false)
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.label("Change Hotkeys");
+                    ui.horizontal(|ui| {
+                        ui.label("Open App");
+                        ui.label("CTRL + ");
+                        ui.add(TextEdit::singleline(&mut self.settings.open).desired_width(10.0));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Quick Screenshot");
+                        ui.label("CTRL + ");
+                        ui.add(TextEdit::singleline(&mut self.settings.quick).desired_width(10.0));
+                    }); 
+                    ui.horizontal(|ui| {
+                        ui.label("Path");
+                        //turn pathbuf into string
+                        ui.add(TextEdit::singleline(&mut self.settings.path));
+                    });
+
+                    //close
+                    ui.horizontal(|ui| {
+                        if ui.button("Cancel").clicked() {
+                            self.settings_dialog=false;
+                        }
+                        if ui.button("Save").clicked() {
+                            write_settings_to_file("settings.json".to_string(), &self.settings).unwrap();
+                            self.settings_dialog=false;
+                        }
+                    });
+                });
+        }
+
         // header of the app
         TopBottomPanel::top("header").show(ctx, |ui| {
             let timer = self.timer;
@@ -104,9 +194,7 @@ impl App for ScreenshotStr {
             ui.horizontal(|ui| {
                 if ui.button("New Screenshot").clicked() {
                     let duration = Duration::from_secs(self.timer as u64);
-                    frame.set_visible(false);
                     self.screenshot=api_mod::take_screenshot(duration,self.screen);
-                    frame.set_visible(true);
                     self.screenshot.save_image(&self.path,self.format).unwrap();
                     self._convert_image();   
                     self.show_image=true;
@@ -148,91 +236,94 @@ impl App for ScreenshotStr {
                 ui.separator();
 
                 // save button
-                if ui.button("Save").clicked() {
-                    self.screenshot.save_image(&self.path,self.format).unwrap();
+                if ui.button("\u{1F4BE}").clicked() {
+                    self.save_dialog=true;
                 }
 
                 // settings button in the top right corner
                 ui.with_layout(Layout::top_down(Align::RIGHT), |ui| {
-                    ui.add(Button::new("Settings"));
+                    if ui.button("\u{2699}").clicked() {
+                        self.settings_dialog=true;
+                    }
                 });
 
             });
 
         });
         CentralPanel::default().show(ctx, |ui| {
-            //Show screenshot here
-            if self.show_image {
-                let mut my_image = MyImage::new();
-                my_image.ui(ui, self.color_image.clone()); 
-               
-            }
+            ui.with_layout(Layout::centered_and_justified(Direction::TopDown), |ui| {
+                if self.show_image {
+                    let mut my_image = MyImage::new();
+                    my_image.ui(ui, self.color_image.clone()); 
+                   
+                }
+            });
         });
 
-        // footer of the app
+// footer of the app
         TopBottomPanel::bottom("footer")
             .resizable(false)
             .show(ctx, |ui| {
-            if self.show_image {
-                ui.horizontal(|ui| {
-                    // rotate left
-                    if ui.button("Rotate Left").clicked() {
-                        self.screenshot.rotate_dx_90().unwrap();
+                if self.show_image {
+                    ui.horizontal(|ui| {
+                        // rotate left
+                        if ui.button("\u{27F3}").clicked() {
+                            self.screenshot.rotate_sx_90().unwrap();
+                            self.show_image=true;
+                        }
 
-                        self.show_image=true;
-                    }
-    
-                    // rotate right
-                    if ui.button("Rotate Right").clicked() {
-                        self.screenshot.rotate_sx_90().unwrap();
-   
-                        self.show_image=true;
-                    }
-    
-                    // crop
-                    if ui.button("Crop").clicked() {
-    
-                    }
-    
-                    // draw
-                    if ui.button("Draw").clicked() {
-    
-                    }
-    
-                    // highlight
-                    if ui.button("Highlight").clicked() {
-    
-                    }
-    
-                    // erase
-                    if ui.button("Erase").clicked() {
-    
-                    }
-    
-                    // shapes
-                    if ui.button("Shapes").clicked() {
-    
-                    }
-    
-                    // text
-                    if ui.button("Text").clicked() {
-    
-                    }
-    
-                    // undo
-                    if ui.button("Undo").clicked() {
-    
-                    }
-    
-                    // redo
-                    if ui.button("Redo").clicked() {
-    
-                    }
-                });
-    
-            }
-            
-        });
+                        // rotate right
+                        if ui.button("\u{27F2}").clicked() {
+                            self.screenshot.rotate_dx_90().unwrap();
+                            self.show_image=true;
+                        }
+
+                        // crop
+                        if ui.button("\u{2702}").clicked() {
+                            self.screenshot.resize_image(190, 200, 300,  200).unwrap();
+                            self.show_image=true;
+                        }
+
+                        // draw
+                        if ui.button("\u{270F}").clicked() {
+                            //self.drawing_mode = !self.drawing_mode;
+                            self.show_image=true;
+                        }
+
+                        // highlight
+                        if ui.button("\u{1F526}").clicked() {
+
+                        }
+
+                        // erase
+                        if ui.button("\u{1F4D8}").clicked() {
+
+                        }
+
+                        // shapes
+                        if ui.button("\u{2B55}").clicked() {
+
+                        }
+
+                        // text
+                        if ui.button("\u{1F1F9}").clicked() {
+
+                        }
+
+                        // undo
+                        if ui.button("\u{21A9}").clicked() {
+
+                        }
+
+                        // redo
+                        if ui.button("\u{21AA}").clicked() {
+
+                        }
+                    });
+
+                }
+
+            });
     }
 }
 
