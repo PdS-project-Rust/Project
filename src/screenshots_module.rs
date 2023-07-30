@@ -8,6 +8,7 @@ pub mod screenshot_module{
     use chrono::Local;
     use eframe::egui::Pos2;
     use image::{DynamicImage, GenericImage, ImageFormat, Rgba, RgbaImage, ImageBuffer};
+    use imageproc::drawing::{Blend, draw_antialiased_line_segment_mut, draw_line_segment_mut};
     use screenshots::Screen;
     use thiserror::Error;
 
@@ -140,6 +141,13 @@ pub mod screenshot_module{
                 let y = point.y as i32;
                 self.draw_point(x, y, r, color);
             }
+        }
+
+        pub fn draw_line(&mut self,starting_point:(f32,f32),ending_point:(f32,f32)){
+            draw_line_segment_mut(&mut self.screenshot,starting_point,ending_point,Rgba::from([255,0,0,255]));
+            draw_line_segment_mut(&mut self.screenshot,(starting_point.0-1.0,starting_point.1-1.0),(ending_point.0-1.0,ending_point.1-1.0),Rgba::from([255,0,0,255]));
+            draw_line_segment_mut(&mut self.screenshot,(starting_point.0-2.0,starting_point.1-2.0),(ending_point.0-2.0,ending_point.1-2.0),Rgba::from([255,0,0,255]));
+            draw_line_segment_mut(&mut self.screenshot,(starting_point.0-3.0,starting_point.1-3.0),(ending_point.0-3.0,ending_point.1-3.0),Rgba::from([255,0,0,255]));
         }
 
     }

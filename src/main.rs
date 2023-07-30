@@ -10,10 +10,11 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
 use image::ImageFormat;
+use imageproc::drawing::draw_antialiased_line_segment_mut;
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
@@ -60,7 +61,9 @@ struct ScreenshotStr {
     save_dialog:bool,
     drawing_mode:bool,
     settings_dialog:bool,
-    settings:Settings
+    settings:Settings,
+    instant:Instant,
+    starting_point:Option<(f32, f32)>,
 }
 
 impl Default for ScreenshotStr {
@@ -76,8 +79,9 @@ impl Default for ScreenshotStr {
             save_dialog:false,
             drawing_mode:false,
             settings_dialog:false,
-            settings:Settings::default()
-
+            settings:Settings::default(),
+            instant:Instant::now(),
+            starting_point:Option::None,
          }
     }
 }
@@ -136,20 +140,31 @@ impl App for ScreenshotStr {
         // drawing
         if self.drawing_mode {
             ctx.input(|ui| {
-                let pos = ui.pointer.interact_pos().unwrap();
-                let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
-                let x = texture_coordinates.x as i32;
-                let y = texture_coordinates.y as i32;
-                let size = 10;
-                let color: [u8;4] = [255, 0, 0, 255];
-                ctx.input(|ui| {
+                let pos = ui.pointer.interact_pos();
+                if pos.is_some(){
+                    let pos=pos.unwrap();
+                    let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                    let x = texture_coordinates.x as i32;
+                    let y = texture_coordinates.y as i32;
+                    let size = 10;
+                    let color: [u8;4] = [255, 0, 0, 255];
                     if ui.pointer.any_down() {
-                        self.screenshot.draw_point(x, y, size, color);
+                        if self.starting_point.is_none(){
+                            self.starting_point=Option::Some((x as f32,y as f32));
+                        }else{
+                            //TODO draw a line
+                            self.screenshot.draw_line(self.starting_point.unwrap(),(x as f32,y as f32));
+                            self.starting_point=Option::Some((x as f32,y as f32));
+                        }
+                    }else{
+                        self.starting_point=Option::None;
                     }
-                });
+                }
             });
-            self._convert_image();
-            self.show_image = true;
+            if Instant::now()>self.instant{
+                self._convert_image();
+                self.instant+=Duration::from_millis(12);
+            }
         }
         // save dialog
         if self.save_dialog {
