@@ -3,14 +3,9 @@ pub mod api_module {
     use crate::screenshots_module::screenshot_module::Screenshot;
     use std::time::Duration;
 
-    pub fn get_screens() -> Vec<usize> {
+    pub fn get_screens() -> Vec<Screen> {
         let screens= Screen::all().unwrap();
-        let mut screen_indeces:Vec<usize>=Vec::new();
-    
-        for (index,_screen) in screens.iter().enumerate() {
-            screen_indeces.push(index);
-        }
-        screen_indeces
+        screens
     }
 
     pub fn take_screenshot(timer:Duration, screen:usize) -> Screenshot {

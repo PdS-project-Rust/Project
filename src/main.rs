@@ -7,9 +7,11 @@ use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, CursorIcon
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
+use std::process::exit;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
 use global_hotkey::GlobalHotKeyEvent;
-use global_hotkey::hotkey::Code::KeyD;
 use global_hotkey::hotkey::Modifiers;
 use image::ImageFormat;
 use tao::event_loop::{EventLoop,ControlFlow};
@@ -131,7 +133,6 @@ fn build_gui() -> () {
 
 impl App for ScreenshotStr {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-
         // drawing
         if self.drawing_mode {
             ctx.input(|ui| {
@@ -145,10 +146,8 @@ impl App for ScreenshotStr {
                     if ui.pointer.any_down() {
                         self.screenshot.draw_point(x, y, size, color);
                     }
-                })
-                
+                });
             });
-            self._convert_image();
             self.show_image = true;
         }
         // save dialog
@@ -235,8 +234,7 @@ impl App for ScreenshotStr {
                 if ui.button("New Screenshot").clicked() {
                     let duration = Duration::from_secs(self.timer as u64);
                     self.screenshot=api_mod::take_screenshot(duration,self.screen);
-                    self.screenshot.save_image(&self.path,self.format).unwrap();
-                    self._convert_image();   
+                    self._convert_image();
                     self.show_image=true;
                 }
 
@@ -266,9 +264,9 @@ impl App for ScreenshotStr {
                     .selected_text(screen_str)
                     .show_ui(ui, |ui| {
                         let screens=api_mod::get_screens();
-                        for screen in screens {
-                            if ui.selectable_value(&mut self.screen, screen, &format!("Screen {}",screen)).clicked() {
-                                self.screen=screen;
+                        for (index,screen) in screens.iter().enumerate() {
+                            if ui.selectable_value(&mut self.screen, index, &format!("Screen {} ({}x{})",index,screen.display_info.height,screen.display_info.width)).clicked() {
+                                self.screen=index;
                             }
                         }
                     });
