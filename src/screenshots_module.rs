@@ -7,7 +7,7 @@ pub mod screenshot_module{
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
     use eframe::egui::Pos2;
-    use image::{DynamicImage, GenericImage, ImageFormat, Rgba, RgbaImage, ImageBuffer};
+    use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage, ImageBuffer, imageops::overlay};
     use imageproc::drawing::{Blend, draw_antialiased_line_segment_mut, draw_line_segment_mut};
     use screenshots::Screen;
     use thiserror::Error;
@@ -135,19 +135,50 @@ pub mod screenshot_module{
             }
         }
 
-        pub fn draw_curve(&mut self, pixels: &[Pos2], r: u32, color: [u8; 4]) {
-            for point in pixels {
-                let x = point.x as i32;
-                let y = point.y as i32;
-                self.draw_point(x, y, r, color);
+        pub fn draw_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), color: [u8; 4], size: f32) {
+            let color_pixel = Rgba::from(color);
+            // main line
+            draw_line_segment_mut(&mut self.screenshot, starting_point, ending_point, color_pixel);
+            // additional lines to simulate the brush size
+            let num_lines = (size + 0.5) as i32; // Round to the nearest integer
+            for i in 1..=num_lines {
+                let offset = i as f32;
+                draw_line_segment_mut(&mut self.screenshot,
+                                      (starting_point.0 - offset, starting_point.1 - offset),
+                                      (ending_point.0 - offset, ending_point.1 - offset),
+                                      color_pixel
+                );
             }
         }
 
-        pub fn draw_line(&mut self,starting_point:(f32,f32),ending_point:(f32,f32)){
-            draw_line_segment_mut(&mut self.screenshot,starting_point,ending_point,Rgba::from([255,0,0,255]));
-            draw_line_segment_mut(&mut self.screenshot,(starting_point.0-1.0,starting_point.1-1.0),(ending_point.0-1.0,ending_point.1-1.0),Rgba::from([255,0,0,255]));
-            draw_line_segment_mut(&mut self.screenshot,(starting_point.0-2.0,starting_point.1-2.0),(ending_point.0-2.0,ending_point.1-2.0),Rgba::from([255,0,0,255]));
-            draw_line_segment_mut(&mut self.screenshot,(starting_point.0-3.0,starting_point.1-3.0),(ending_point.0-3.0,ending_point.1-3.0),Rgba::from([255,0,0,255]));
+        pub fn highlight(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32) {
+            // yellow semi-transparent
+            let color_pixel = Rgba::from([255, 255, 0, 16]);
+            // draw horizontal stripes
+            draw_line_segment_mut(&mut self.screenshot, starting_point, ending_point, color_pixel);
+            let num_lines = (size + 0.5) as i32; // Round to the nearest integer
+            for i in 1..=num_lines {
+                let offset = i as f32;
+                draw_line_segment_mut(&mut self.screenshot,
+                                      (starting_point.0, starting_point.1 - offset),
+                                      (ending_point.0, ending_point.1 - offset),
+                                      color_pixel
+                );
+            }
+            // create an overlay image with the same size as the screenshot
+            let mut overlay_image = RgbaImage::new(self.screenshot.width(), self.screenshot.height());
+            // draw the highlighted stripes on the overlay image
+            draw_line_segment_mut(&mut overlay_image, starting_point, ending_point, color_pixel);
+            for i in 1..=num_lines {
+                let offset = i as f32;
+                draw_line_segment_mut(&mut overlay_image,
+                                      (starting_point.0, starting_point.1 - offset),
+                                      (ending_point.0, ending_point.1 - offset),
+                                      color_pixel
+                );
+            }
+            // blend the overlay image with the screenshot
+            overlay(&mut self.screenshot, &overlay_image, 0, 0);
         }
 
     }

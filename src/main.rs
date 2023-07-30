@@ -97,7 +97,6 @@ impl ScreenshotStr {
         );
         
         self.color_image = col_im;
-
     }
 
     fn calculate_texture_coordinates(&self, cursor_pos: Pos2, ctx: &egui::Context) -> Pos2 {
@@ -122,13 +121,13 @@ impl ScreenshotStr {
 fn build_gui() -> () {
     //APP CONF
     let options = NativeOptions {
-        initial_window_size: Some(egui::vec2(320.0, 240.0)),
+        initial_window_size: Some(egui::vec2(640.0, 400.0)),
         ..Default::default()
     };
 
     println!("Starting app");
     eframe::run_native(
-        "My egui App",
+        "Screen Capture",
         options,
         Box::new(|_cc| Box::<ScreenshotStr>::default()),
     ).unwrap();
@@ -141,29 +140,28 @@ impl App for ScreenshotStr {
             ctx.input(|ui| {
                 let pos = ui.pointer.interact_pos();
                 if pos.is_some(){
-                    let pos=pos.unwrap();
+                    let pos= pos.unwrap();
                     let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
                     let x = texture_coordinates.x as i32;
                     let y = texture_coordinates.y as i32;
-                    let size = 10;
+                    let size = 5.0;
                     let color: [u8;4] = [255, 0, 0, 255];
                     if ui.pointer.any_down() {
                         if self.starting_point.is_none(){
                             self.starting_point=Option::Some((x as f32,y as f32));
-                        }else{
-                            //TODO draw a line
-                            self.screenshot.draw_line(self.starting_point.unwrap(),(x as f32,y as f32));
+                        } else {
+                            self.screenshot.draw_line(self.starting_point.unwrap(),(x as f32,y as f32), color, size);
                             self.starting_point=Option::Some((x as f32,y as f32));
+                            if Instant::now()>self.instant{
+                                self._convert_image();
+                                self.instant+=Duration::from_millis(12);
+                            }
                         }
-                    }else{
+                    } else {
                         self.starting_point=Option::None;
                     }
                 }
             });
-            if Instant::now()>self.instant{
-                self._convert_image();
-                self.instant+=Duration::from_millis(12);
-            }
         }
         // save dialog
         if self.save_dialog {
