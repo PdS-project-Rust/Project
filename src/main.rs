@@ -148,6 +148,7 @@ impl App for ScreenshotStr {
                     }
                 });
             });
+            self._convert_image();
             self.show_image = true;
         }
         // save dialog
