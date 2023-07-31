@@ -151,34 +151,44 @@ pub mod screenshot_module{
             }
         }
 
-        pub fn highlight(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32) {
-            // yellow semi-transparent
-            let color_pixel = Rgba::from([255, 255, 0, 16]);
-            // draw horizontal stripes
-            draw_line_segment_mut(&mut self.screenshot, starting_point, ending_point, color_pixel);
-            let num_lines = (size + 0.5) as i32; // Round to the nearest integer
-            for i in 1..=num_lines {
-                let offset = i as f32;
-                draw_line_segment_mut(&mut self.screenshot,
-                                      (starting_point.0, starting_point.1 - offset),
-                                      (ending_point.0, ending_point.1 - offset),
-                                      color_pixel
-                );
-            }
-            // create an overlay image with the same size as the screenshot
+        pub fn highlight_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32) {
+            // yellow color with transparency
+            let highlight_color = Rgba([255, 255, 0, 64]);
+            // create a temporary overlay image with the same size as the screenshot
             let mut overlay_image = RgbaImage::new(self.screenshot.width(), self.screenshot.height());
             // draw the highlighted stripes on the overlay image
-            draw_line_segment_mut(&mut overlay_image, starting_point, ending_point, color_pixel);
+            draw_line_segment_mut(&mut overlay_image, starting_point, ending_point, highlight_color);
+            let num_lines = (size + 0.5) as i32; // Round to the nearest integer
             for i in 1..=num_lines {
                 let offset = i as f32;
                 draw_line_segment_mut(&mut overlay_image,
                                       (starting_point.0, starting_point.1 - offset),
                                       (ending_point.0, ending_point.1 - offset),
-                                      color_pixel
+                                      highlight_color
                 );
             }
-            // blend the overlay image with the screenshot
-            overlay(&mut self.screenshot, &overlay_image, 0, 0);
+            // combine the overlay image with the screenshot using alpha blending
+            let (width, height) = self.screenshot.dimensions();
+            for y in 0..height {
+                for x in 0..width {
+                    let screenshot_pixel = self.screenshot.get_pixel(x, y);
+                    let overlay_pixel = overlay_image.get_pixel(x, y);
+
+                    // Calculate the blended pixel color manually
+                    let blended_pixel = Self::blend_colors(screenshot_pixel, *overlay_pixel);
+                    self.screenshot.put_pixel(x, y, blended_pixel);
+                }
+            }
+        }
+
+        fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
+            let alpha = foreground[3] as f32 / 255.0;
+            let inv_alpha = 1.0 - alpha;
+            let r = (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
+            let g = (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
+            let b = (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
+            let a = background[3];
+            Rgba([r, g, b, a])
         }
 
     }

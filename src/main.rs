@@ -19,6 +19,21 @@ use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
 
+fn build_gui() -> () {
+    //APP CONF
+    let options = NativeOptions {
+        initial_window_size: Some(egui::vec2(640.0, 400.0)),
+        ..Default::default()
+    };
+
+    println!("Starting app");
+    eframe::run_native(
+        "Screen Capture",
+        options,
+        Box::new(|_cc| Box::<ScreenshotStr>::default()),
+    ).unwrap();
+}
+
 struct MyImage {
     texture: Option<egui::TextureHandle>,
 }
@@ -50,6 +65,13 @@ impl MyImage {
         Self { texture: None }
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DrawingMode {
+    Paint,
+    Highlight,
+}
+
 struct ScreenshotStr {
     timer:usize,
     screen:usize,
@@ -59,7 +81,7 @@ struct ScreenshotStr {
     color_image:ColorImage,
     show_image:bool,
     save_dialog:bool,
-    drawing_mode:bool,
+    drawing_mode:Option<DrawingMode>,
     settings_dialog:bool,
     settings:Settings,
     instant:Instant,
@@ -77,16 +99,25 @@ impl Default for ScreenshotStr {
             color_image:ColorImage::example(),
             show_image:false,
             save_dialog:false,
-            drawing_mode:false,
+            drawing_mode:None,
             settings_dialog:false,
             settings:Settings::default(),
             instant:Instant::now(),
-            starting_point:Option::None,
+            starting_point:None,
          }
     }
 }
 
 impl ScreenshotStr {
+    pub fn toggle_drawing_mode(&mut self, mode: DrawingMode) {
+        if self.drawing_mode == Some(mode.clone()) {
+            self.drawing_mode = None;
+        } else {
+            self.drawing_mode = Some(mode);
+        }
+        self.show_image = true;
+    }
+
     pub fn _convert_image(&mut self) -> () {
         let image = self.screenshot.get_image().unwrap();
         let size = [image.width() as _, image.height() as _];
@@ -117,52 +148,75 @@ impl ScreenshotStr {
         };
         image_cursor_pos
     }
-}
-fn build_gui() -> () {
-    //APP CONF
-    let options = NativeOptions {
-        initial_window_size: Some(egui::vec2(640.0, 400.0)),
-        ..Default::default()
-    };
 
-    println!("Starting app");
-    eframe::run_native(
-        "Screen Capture",
-        options,
-        Box::new(|_cc| Box::<ScreenshotStr>::default()),
-    ).unwrap();
+   /* pub fn draw(&mut self) -> Result<(), String> {
+
+    } */
+
 }
 
 impl App for ScreenshotStr {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // drawing
-        if self.drawing_mode {
-            ctx.input(|ui| {
-                let pos = ui.pointer.interact_pos();
-                if pos.is_some(){
-                    let pos= pos.unwrap();
-                    let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
-                    let x = texture_coordinates.x as i32;
-                    let y = texture_coordinates.y as i32;
-                    let size = 5.0;
-                    let color: [u8;4] = [255, 0, 0, 255];
-                    if ui.pointer.any_down() {
-                        if self.starting_point.is_none(){
-                            self.starting_point=Option::Some((x as f32,y as f32));
-                        } else {
-                            self.screenshot.draw_line(self.starting_point.unwrap(),(x as f32,y as f32), color, size);
-                            self.starting_point=Option::Some((x as f32,y as f32));
-                            if Instant::now()>self.instant{
-                                self._convert_image();
-                                self.instant+=Duration::from_millis(12);
+        match self.drawing_mode {
+            Some(DrawingMode::Paint) => {
+                ctx.input(|ui| {
+                    let pos = ui.pointer.interact_pos();
+                    if pos.is_some(){
+                        let pos= pos.unwrap();
+                        let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                        let x = texture_coordinates.x as i32;
+                        let y = texture_coordinates.y as i32;
+                        let size = 5.0;
+                        let color: [u8;4] = [255, 0, 0, 255];
+                        if ui.pointer.any_down() {
+                            if self.starting_point.is_none(){
+                                self.starting_point=Option::Some((x as f32,y as f32));
+                            } else {
+                                self.screenshot.draw_line(self.starting_point.unwrap(),(x as f32,y as f32), color, size);
+                                self.starting_point=Option::Some((x as f32,y as f32));
+                                if Instant::now()>self.instant{
+                                    self._convert_image();
+                                    self.instant+=Duration::from_millis(12);
+                                }
                             }
+                        } else {
+                            self.starting_point=Option::None;
                         }
-                    } else {
-                        self.starting_point=Option::None;
                     }
-                }
-            });
+                });
+            }
+            Some(DrawingMode::Highlight) => {
+                ctx.input(|ui| {
+                    let pos = ui.pointer.interact_pos();
+                    if pos.is_some(){
+                        let pos= pos.unwrap();
+                        let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                        let x = texture_coordinates.x as i32;
+                        let y = texture_coordinates.y as i32;
+                        let size = 15.0;
+                        if ui.pointer.any_down() {
+                            if self.starting_point.is_none(){
+                                self.starting_point=Option::Some((x as f32,y as f32));
+                            } else {
+                                self.screenshot.highlight_line(self.starting_point.unwrap(),(x as f32,y as f32), size);
+                                self.starting_point=Option::Some((x as f32,y as f32));
+                                if Instant::now()>self.instant{
+                                    self._convert_image();
+                                    self.instant+=Duration::from_millis(12);
+                                }
+                            }
+                        } else {
+                            self.starting_point=Option::None;
+                        }
+                    }
+                });
+            }
+            None => {
+                // nessuna modalità selezionata
+            }
         }
+
         // save dialog
         if self.save_dialog {
             Window::new("Save Screenshot")
@@ -337,17 +391,12 @@ impl App for ScreenshotStr {
 
                         // draw
                         if ui.button("\u{270F}").clicked() {
-                            self.drawing_mode = !self.drawing_mode;
-                            if self.drawing_mode {
-                                //set crosshair cursor
-                                ui.ctx().set_cursor_icon(CursorIcon::Crosshair);
-                            }
-                            self.show_image=true;
+                           self.toggle_drawing_mode(DrawingMode::Paint);
                         }
 
                         // highlight
                         if ui.button("\u{1F526}").clicked() {
-
+                           self.toggle_drawing_mode(DrawingMode::Highlight);
                         }
 
                         // erase
