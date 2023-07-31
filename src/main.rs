@@ -154,23 +154,23 @@ impl ScreenshotStr {
             let pos = ui.pointer.interact_pos();
             if let Some(pos) = pos {
                 let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
-                let x = texture_coordinates.x as i32;
-                let y = texture_coordinates.y as i32;
+                let x = texture_coordinates.x;
+                let y = texture_coordinates.y;
 
                 if ui.pointer.any_down() {
                     if self.starting_point.is_none() {
-                        self.starting_point = Some((x as f32, y as f32));
+                        self.starting_point = Some((x, y));
                     } else {
                         self.screenshot.draw_line(
                             self.starting_point.unwrap(),
-                            (x as f32, y as f32),
+                            (x, y),
                             color,
                             size,
                         );
-                        self.starting_point = Some((x as f32, y as f32));
+                        self.starting_point = Some((x, y));
                         if Instant::now() > self.instant {
                             self._convert_image();
-                            self.instant += Duration::from_millis(12);
+                            self.instant += Duration::from_millis(16);
                         }
                     }
                 } else {
@@ -185,22 +185,24 @@ impl ScreenshotStr {
             let pos = ui.pointer.interact_pos();
             if let Some(pos) = pos {
                 let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
-                let x = texture_coordinates.x as i32;
-                let y = texture_coordinates.y as i32;
+                let x = texture_coordinates.x;
+                let y = texture_coordinates.y;
 
                 if ui.pointer.any_down() {
                     if self.starting_point.is_none() {
-                        self.starting_point = Some((x as f32, y as f32));
+                        self.starting_point = Some((x, y));
                     } else {
                         self.screenshot.highlight_line(
                             self.starting_point.unwrap(),
-                            (x as f32, y as f32),
+                            (x, y),
                             size,
                         );
-                        self.starting_point = Some((x as f32, y as f32));
+                        let mut dx = 1.0;
+                        if self.starting_point.unwrap().0 > x { dx = -1.0 }
+                        self.starting_point = Some((x+dx, y));
                         if Instant::now() > self.instant {
                             self._convert_image();
-                            self.instant += Duration::from_millis(12);
+                            self.instant += Duration::from_millis(16);
                         }
                     }
                 } else {
