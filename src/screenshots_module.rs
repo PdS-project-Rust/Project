@@ -140,8 +140,7 @@ pub mod screenshot_module{
             // main line
             draw_line_segment_mut(&mut self.screenshot, starting_point, ending_point, color_pixel);
             // additional lines to simulate the brush size
-            let num_lines = (size + 0.5) as i32; // Round to the nearest integer
-            for i in 1..=num_lines {
+            for i in 1..=(size as i32) {
                 let offset = i as f32;
                 draw_line_segment_mut(&mut self.screenshot,
                                       (starting_point.0 - offset, starting_point.1 - offset),
@@ -158,8 +157,7 @@ pub mod screenshot_module{
             let mut overlay_image = RgbaImage::new(self.screenshot.width(), self.screenshot.height());
             // draw the highlighted stripes on the overlay image
             draw_line_segment_mut(&mut overlay_image, starting_point, ending_point, highlight_color);
-            let num_lines = (size + 0.5) as i32; // Round to the nearest integer
-            for i in 1..=num_lines {
+            for i in 1..=(size as i32) {
                 let offset = i as f32;
                 draw_line_segment_mut(&mut overlay_image,
                                       (starting_point.0, starting_point.1 - offset),
@@ -173,8 +171,7 @@ pub mod screenshot_module{
                 for x in 0..width {
                     let screenshot_pixel = self.screenshot.get_pixel(x, y);
                     let overlay_pixel = overlay_image.get_pixel(x, y);
-
-                    // Calculate the blended pixel color manually
+                    // calculate the blended pixel color manually
                     let blended_pixel = Self::blend_colors(screenshot_pixel, *overlay_pixel);
                     self.screenshot.put_pixel(x, y, blended_pixel);
                 }
