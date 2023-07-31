@@ -137,16 +137,26 @@ pub mod screenshot_module{
 
         pub fn draw_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), color: [u8; 4], size: f32) {
             let color_pixel = Rgba::from(color);
-            // main line
-            draw_line_segment_mut(&mut self.screenshot, starting_point, ending_point, color_pixel);
-            // additional lines to simulate the brush size
-            for i in 1..=(size as i32) {
-                let offset = i as f32;
-                draw_line_segment_mut(&mut self.screenshot,
-                                      (starting_point.0 - offset, starting_point.1 - offset),
-                                      (ending_point.0 - offset, ending_point.1 - offset),
-                                      color_pixel
-                );
+            let size = size.round() as i32; // Round the size to the nearest integer
+            // calculate the direction vector of the line
+            let dx = ending_point.0 - starting_point.0;
+            let dy = ending_point.1 - starting_point.1;
+            let length = (dx * dx + dy * dy).sqrt();
+            // calculate the normalized perpendicular vector to the line
+            let nx = dy / length;
+            let ny = -dx / length;
+            // calculate the step size for the brush strokes
+            let step_size = 1.0 / size as f32;
+            for i in 0..size {
+                // calculate the offset along the perpendicular vector
+                let offset = (i as f32 - size as f32 / 2.0) * step_size;
+                // calculate the starting and ending points for each brush stroke
+                let start_x = starting_point.0 + nx * offset;
+                let start_y = starting_point.1 + ny * offset;
+                let end_x = ending_point.0 + nx * offset;
+                let end_y = ending_point.1 + ny * offset;
+                // draw the brush stroke
+                draw_line_segment_mut(&mut self.screenshot, (start_x, start_y), (end_x, end_y), color_pixel);
             }
         }
 
