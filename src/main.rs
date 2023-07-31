@@ -220,7 +220,7 @@ impl App for ScreenshotStr {
         // drawing
         match self.drawing_mode {
             Some(DrawingMode::Paint) => {
-                let size = 5.0;
+                let size = 9.0;
                 let color: [u8; 4] = [255, 0, 0, 255];
                 self.draw_paint(ctx, size, color);
             }
