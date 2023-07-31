@@ -149,9 +149,67 @@ impl ScreenshotStr {
         image_cursor_pos
     }
 
-   /* pub fn draw(&mut self) -> Result<(), String> {
+    fn draw_paint(&mut self, ctx: &egui::Context, size: f32, color: [u8;4]) {
+        ctx.input(|ui| {
+            let pos = ui.pointer.interact_pos();
+            if let Some(pos) = pos {
+                let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                let x = texture_coordinates.x as i32;
+                let y = texture_coordinates.y as i32;
 
-    } */
+                if ui.pointer.any_down() {
+                    if self.starting_point.is_none() {
+                        self.starting_point = Some((x as f32, y as f32));
+                    } else {
+                        self.screenshot.draw_line(
+                            self.starting_point.unwrap(),
+                            (x as f32, y as f32),
+                            color,
+                            size,
+                        );
+                        self.starting_point = Some((x as f32, y as f32));
+                        if Instant::now() > self.instant {
+                            self._convert_image();
+                            self.instant += Duration::from_millis(12);
+                        }
+                    }
+                } else {
+                    self.starting_point = None;
+                }
+            }
+        });
+    }
+
+    fn draw_highlight(&mut self, ctx: &egui::Context, size: f32) {
+        ctx.input(|ui| {
+            let pos = ui.pointer.interact_pos();
+            if let Some(pos) = pos {
+                let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                let x = texture_coordinates.x as i32;
+                let y = texture_coordinates.y as i32;
+
+                if ui.pointer.any_down() {
+                    if self.starting_point.is_none() {
+                        self.starting_point = Some((x as f32, y as f32));
+                    } else {
+                        self.screenshot.highlight_line(
+                            self.starting_point.unwrap(),
+                            (x as f32, y as f32),
+                            size,
+                        );
+                        self.starting_point = Some((x as f32, y as f32));
+                        if Instant::now() > self.instant {
+                            self._convert_image();
+                            self.instant += Duration::from_millis(12);
+                        }
+                    }
+                } else {
+                    self.starting_point = None;
+                }
+            }
+        });
+    }
+
 
 }
 
@@ -160,57 +218,13 @@ impl App for ScreenshotStr {
         // drawing
         match self.drawing_mode {
             Some(DrawingMode::Paint) => {
-                ctx.input(|ui| {
-                    let pos = ui.pointer.interact_pos();
-                    if pos.is_some(){
-                        let pos= pos.unwrap();
-                        let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
-                        let x = texture_coordinates.x as i32;
-                        let y = texture_coordinates.y as i32;
-                        let size = 5.0;
-                        let color: [u8;4] = [255, 0, 0, 255];
-                        if ui.pointer.any_down() {
-                            if self.starting_point.is_none(){
-                                self.starting_point=Option::Some((x as f32,y as f32));
-                            } else {
-                                self.screenshot.draw_line(self.starting_point.unwrap(),(x as f32,y as f32), color, size);
-                                self.starting_point=Option::Some((x as f32,y as f32));
-                                if Instant::now()>self.instant{
-                                    self._convert_image();
-                                    self.instant+=Duration::from_millis(12);
-                                }
-                            }
-                        } else {
-                            self.starting_point=Option::None;
-                        }
-                    }
-                });
+                let size = 5.0;
+                let color: [u8; 4] = [255, 0, 0, 255];
+                self.draw_paint(ctx, size, color);
             }
             Some(DrawingMode::Highlight) => {
-                ctx.input(|ui| {
-                    let pos = ui.pointer.interact_pos();
-                    if pos.is_some(){
-                        let pos= pos.unwrap();
-                        let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
-                        let x = texture_coordinates.x as i32;
-                        let y = texture_coordinates.y as i32;
-                        let size = 15.0;
-                        if ui.pointer.any_down() {
-                            if self.starting_point.is_none(){
-                                self.starting_point=Option::Some((x as f32,y as f32));
-                            } else {
-                                self.screenshot.highlight_line(self.starting_point.unwrap(),(x as f32,y as f32), size);
-                                self.starting_point=Option::Some((x as f32,y as f32));
-                                if Instant::now()>self.instant{
-                                    self._convert_image();
-                                    self.instant+=Duration::from_millis(12);
-                                }
-                            }
-                        } else {
-                            self.starting_point=Option::None;
-                        }
-                    }
-                });
+                let size = 20.0;
+                self.draw_highlight(ctx, size);
             }
             None => {
                 // nessuna modalità selezionata
