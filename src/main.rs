@@ -3,18 +3,14 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, CursorIcon}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Slider}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
-use std::process::exit;
-use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::{Duration, Instant};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
 use image::{EncodableLayout, ImageFormat};
-use imageproc::drawing::draw_antialiased_line_segment_mut;
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
@@ -69,23 +65,33 @@ impl MyImage {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum DrawingMode {
     Paint,
-    Highlight,
+    Highlight
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Shapes {
+    Rectangle,
+    Circle,
+    //Arrow,
 }
 
 struct ScreenshotStr {
     timer:usize,
     screen:usize,
     screenshot:Screenshot,
-    path:PathBuf,
     format:ImageFormat,
     color_image:ColorImage,
     show_image:bool,
     save_dialog:bool,
     drawing_mode:Option<DrawingMode>,
+    shape_mode:bool,
+    shape:Option<Shapes>,
     settings_dialog:bool,
     settings:Settings,
     instant:Instant,
     starting_point:Option<(f32, f32)>,
+    color: [u8;3],
+    size: f32,
 }
 
 impl Default for ScreenshotStr {
@@ -94,16 +100,19 @@ impl Default for ScreenshotStr {
             timer:0,
             screen:0,
             screenshot:Screenshot::new_empty(),
-            path:PathBuf::from(r"./".to_string()),
             format:ImageFormat::Png,
             color_image:ColorImage::example(),
             show_image:false,
             save_dialog:false,
             drawing_mode:None,
+            shape_mode:false,
+            shape:None,
             settings_dialog:false,
             settings:Settings::default(),
             instant:Instant::now(),
             starting_point:None,
+            color: [255, 0, 0],
+            size: 5.0,
          }
     }
 }
@@ -156,7 +165,6 @@ impl ScreenshotStr {
                 let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
                 let x = texture_coordinates.x;
                 let y = texture_coordinates.y;
-
                 if ui.pointer.any_down() {
                     if self.starting_point.is_none() {
                         self.starting_point = Some((x, y));
@@ -216,21 +224,18 @@ impl ScreenshotStr {
 }
 
 impl App for ScreenshotStr {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // drawing
         match self.drawing_mode {
             Some(DrawingMode::Paint) => {
-                let size = 9.0;
-                let color: [u8; 4] = [255, 0, 0, 255];
-                self.draw_paint(ctx, size, color);
+                let color_4 = [self.color[0], self.color[1], self.color[2], 255];
+                self.draw_paint(ctx, self.size, color_4);
             }
             Some(DrawingMode::Highlight) => {
                 let size = 20.0;
                 self.draw_highlight(ctx, size);
             }
-            None => {
-                // nessuna modalità selezionata
-            }
+            _ => {}
         }
 
         // save dialog
@@ -407,7 +412,16 @@ impl App for ScreenshotStr {
 
                         // draw
                         if ui.button("\u{270F}").clicked() {
-                           self.toggle_drawing_mode(DrawingMode::Paint);
+                            self.toggle_drawing_mode(DrawingMode::Paint);
+                        }
+                        if self.drawing_mode == Some(DrawingMode::Paint){
+                            let color = &mut self.color;
+
+                            //color picker
+                            ui.color_edit_button_srgb(color);
+
+                            //brush size
+                            ui.add(Slider::new(&mut self.size, 1.0..=100.0).text("Size"));
                         }
 
                         // highlight
@@ -422,7 +436,16 @@ impl App for ScreenshotStr {
 
                         // shapes
                         if ui.button("\u{2B55}").clicked() {
-
+                            self.shape_mode = !self.shape_mode;
+                        }
+                        if self.shape_mode {
+                            //chose shape
+                            ComboBox::from_label("Shape")
+                                .selected_text("Shape")
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(&mut self.shape, Some(Shapes::Rectangle), "Rectangle");
+                                    ui.selectable_value(&mut self.shape, Some(Shapes::Circle), "Circle");
+                                });
                         }
 
                         // text
