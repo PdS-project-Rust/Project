@@ -520,7 +520,6 @@ impl App for ScreenshotStr {
                                 self.draw_highlight(ctx, available, self.highlighter_size);
                             }
                             Some(DrawingMode::Erase) => {
-                                ctx.set_cursor_icon(egui::CursorIcon::);
                                 self.erase(ctx, available,self.eraser_size);
                             }
                             _ => {}
