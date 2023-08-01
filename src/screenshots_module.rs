@@ -23,12 +23,14 @@ pub mod screenshot_module{
 
     pub struct Screenshot {
         screenshot: DynamicImage,
+        original_image: DynamicImage,
     }
 
     impl Screenshot {
         pub fn new_empty() -> Screenshot {
             Screenshot{
                 screenshot: DynamicImage::new_rgba8(0,0),
+                original_image: DynamicImage::new_rgba8(0,0),
             }
         }
 
@@ -39,9 +41,11 @@ pub mod screenshot_module{
             let image_rgba=image_captured.rgba().to_owned();
             let rgba_image=RgbaImage::from_raw(width,height,image_rgba).unwrap();
             let image_obj=DynamicImage::from(rgba_image);
+            let original_obj=image_obj.clone();
             Ok(
                 Screenshot{
                     screenshot: image_obj,
+                    original_image: original_obj,
                 }
             )
         }
@@ -114,9 +118,11 @@ pub mod screenshot_module{
             Screenshot::new(screen)
         }
 
-        pub fn _draw_point(&mut self, x: i32, y: i32, r: u32, color: [u8;4]) {
+        pub fn draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8;4]) {
             let width = self.screenshot.width() as i32;
             let height = self.screenshot.height() as i32;
+            let x = x as i32;
+            let y = y as i32;
             let r = r as i32;
             if x > 0 && x < width && y > 0 && y < height {
                 // println!("{}{}",x,y);
@@ -187,7 +193,34 @@ pub mod screenshot_module{
             }
         }
 
-        fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
+        pub fn erase_point(&mut self, x: f32, y: f32, size: f32) {
+            let src_pixel = self.original_image.get_pixel(x as u32, y as u32);
+            let src_array = src_pixel.0;
+            self.draw_point(x, y, size, src_pixel.0);
+            /*
+            // v2
+            let width = self.screenshot.width() as i32;
+            let height = self.screenshot.height() as i32;
+            let (x, y) = (x as i32, y as i32);
+            let size = size as i32;
+
+            if x > 0 && x < width && y > 0 && y < height {
+                for dx in -size..size {
+                    for dy in -size..size {
+                        let src_x = x + dx;
+                        let src_y = y + dy;
+                        if src_x >= 0 && src_x < width as i32 && src_y >= 0 && src_y < height as i32 {
+                            let src_pixel = self.original_image.get_pixel(src_x as u32, src_y as u32);
+                            self.screenshot.put_pixel(x as u32 + dx as u32, y as u32 + dy as u32, src_pixel);
+                        }
+                    }
+                }
+            }
+             */
+        }
+
+
+        pub fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
             let alpha = foreground[3] as f32 / 255.0;
             let inv_alpha = 1.0 - alpha;
             let r = (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;

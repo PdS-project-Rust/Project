@@ -3,14 +3,14 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Slider}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Color32, Slider, Rect, Rounding, Stroke, Window, ComboBox, TopBottomPanel, Rgba, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{EncodableLayout, ImageFormat};
+use image::{EncodableLayout, ImageFormat, DynamicImage};
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
@@ -65,7 +65,8 @@ impl MyImage {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum DrawingMode {
     Paint,
-    Highlight
+    Highlight,
+    Erase,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -90,8 +91,8 @@ struct ScreenshotStr {
     settings:Settings,
     instant:Instant,
     starting_point:Option<(f32, f32)>,
-    color: [u8;3],
-    size: f32,
+    brush_color: [u8;3],
+    brush_size: f32,
 }
 
 impl Default for ScreenshotStr {
@@ -111,15 +112,15 @@ impl Default for ScreenshotStr {
             settings:Settings::default(),
             instant:Instant::now(),
             starting_point:None,
-            color: [255, 0, 0],
-            size: 5.0,
+            brush_color: [255, 0, 0],
+            brush_size: 10.0,
          }
     }
 }
 
 impl ScreenshotStr {
     pub fn toggle_drawing_mode(&mut self, mode: DrawingMode) {
-        if self.drawing_mode == Some(mode.clone()) {
+        if self.drawing_mode == Some(mode) {
             self.drawing_mode = None;
         } else {
             self.drawing_mode = Some(mode);
@@ -220,6 +221,26 @@ impl ScreenshotStr {
         });
     }
 
+    fn erase(&mut self, ctx: &egui::Context, size: f32) {
+        ctx.input(|ui| {
+            let pos = ui.pointer.interact_pos();
+            if let Some(pos) = pos {
+                let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                let x = texture_coordinates.x;
+                let y = texture_coordinates.y;
+
+                if ui.pointer.any_down() {
+                    //
+                    self.screenshot.erase_point(x, y, self.brush_size);
+                    //
+                    if Instant::now() > self.instant {
+                        self._convert_image();
+                        self.instant += Duration::from_millis(16);
+                    }
+                }
+            }
+        });
+    }
 
 }
 
@@ -228,12 +249,14 @@ impl App for ScreenshotStr {
         // drawing
         match self.drawing_mode {
             Some(DrawingMode::Paint) => {
-                let color_4 = [self.color[0], self.color[1], self.color[2], 255];
-                self.draw_paint(ctx, self.size, color_4);
+                let brush_color_rgba = [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255];
+                self.draw_paint(ctx, self.brush_size, brush_color_rgba);
             }
             Some(DrawingMode::Highlight) => {
-                let size = 20.0;
-                self.draw_highlight(ctx, size);
+                self.draw_highlight(ctx, self.brush_size*2.5);
+            }
+            Some(DrawingMode::Erase) => {
+                self.erase(ctx, self.brush_size);
             }
             _ => {}
         }
@@ -415,13 +438,10 @@ impl App for ScreenshotStr {
                             self.toggle_drawing_mode(DrawingMode::Paint);
                         }
                         if self.drawing_mode == Some(DrawingMode::Paint){
-                            let color = &mut self.color;
-
                             //color picker
-                            ui.color_edit_button_srgb(color);
-
+                            ui.color_edit_button_srgb(&mut self.brush_color);
                             //brush size
-                            ui.add(Slider::new(&mut self.size, 1.0..=100.0).text("Size"));
+                            ui.add(Slider::new(&mut self.brush_size, 1.0..=100.0).text("Size"));
                         }
 
                         // highlight
@@ -431,7 +451,7 @@ impl App for ScreenshotStr {
 
                         // erase
                         if ui.button("\u{1F4D8}").clicked() {
-
+                            self.toggle_drawing_mode(DrawingMode::Erase);
                         }
 
                         // shapes
