@@ -93,6 +93,8 @@ struct ScreenshotStr {
     starting_point:Option<(f32, f32)>,
     brush_color: [u8;3],
     brush_size: f32,
+    highlighter_size: f32,
+    eraser_size: f32,
 }
 
 impl Default for ScreenshotStr {
@@ -113,7 +115,9 @@ impl Default for ScreenshotStr {
             instant:Instant::now(),
             starting_point:None,
             brush_color: [255, 0, 0],
-            brush_size: 10.0,
+            brush_size: 6.0,
+            highlighter_size: 18.0,
+            eraser_size: 16.0,
          }
     }
 }
@@ -146,7 +150,8 @@ impl ScreenshotStr {
         let h = self.screenshot.get_height().unwrap() as f32;
         let w_window = available.width();
         let h_window = available.height();
-        let height = h_window.min(w_window * h / w);
+        let border = 35.0;
+        let height = (h_window - border).min(w_window * (h - border) / w);
         let width = height * w / h;
         let h_scale = height / h;
         let w_scale = width / w;
@@ -230,9 +235,7 @@ impl ScreenshotStr {
                 let y = texture_coordinates.y;
 
                 if ui.pointer.any_down() {
-                    //
-                    self.screenshot.erase_point(x, y, self.brush_size);
-                    //
+                    self.screenshot.erase_point(x, y, size);
                     if Instant::now() > self.instant {
                         self._convert_image();
                         self.instant += Duration::from_millis(16);
@@ -253,10 +256,10 @@ impl App for ScreenshotStr {
                 self.draw_paint(ctx, self.brush_size, brush_color_rgba);
             }
             Some(DrawingMode::Highlight) => {
-                self.draw_highlight(ctx, self.brush_size*2.5);
+                self.draw_highlight(ctx, self.highlighter_size);
             }
             Some(DrawingMode::Erase) => {
-                self.erase(ctx, self.brush_size);
+                self.erase(ctx, self.eraser_size);
             }
             _ => {}
         }
@@ -441,7 +444,7 @@ impl App for ScreenshotStr {
                             //color picker
                             ui.color_edit_button_srgb(&mut self.brush_color);
                             //brush size
-                            ui.add(Slider::new(&mut self.brush_size, 1.0..=100.0).text("Size"));
+                            ui.add(Slider::new(&mut self.brush_size, 1.0..=35.0).text("Size"));
                         }
 
                         // highlight

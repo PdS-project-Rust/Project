@@ -142,7 +142,6 @@ pub mod screenshot_module{
 
         pub fn draw_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), color: [u8; 4], size: f32) {
             let color_pixel = Rgba::from(color);
-            let size = size.round() as i32; // Round the size to the nearest integer
             // calculate the direction vector of the line
             let dx = ending_point.0 - starting_point.0;
             let dy = ending_point.1 - starting_point.1;
@@ -151,10 +150,11 @@ pub mod screenshot_module{
             let nx = dy / length;
             let ny = -dx / length;
             // calculate the step size for the brush strokes
-            let step_size = 1.0 / size as f32;
-            for i in 0..size {
+            let step_size =  0.5;
+            let thickness = 2 * (size + 0.5) as i32;
+            for i in 0..thickness {
                 // calculate the offset along the perpendicular vector
-                let offset = (i as f32 - size as f32 / 2.0) * step_size;
+                let offset = (i as f32 - size) * step_size;
                 // calculate the starting and ending points for each brush stroke
                 let start_x = starting_point.0 + nx * offset;
                 let start_y = starting_point.1 + ny * offset;
@@ -193,30 +193,26 @@ pub mod screenshot_module{
             }
         }
 
-        pub fn erase_point(&mut self, x: f32, y: f32, size: f32) {
-            let src_pixel = self.original_image.get_pixel(x as u32, y as u32);
-            let src_array = src_pixel.0;
-            self.draw_point(x, y, size, src_pixel.0);
-            /*
-            // v2
+        pub fn erase_point(&mut self, x: f32, y: f32, r: f32) {
             let width = self.screenshot.width() as i32;
             let height = self.screenshot.height() as i32;
             let (x, y) = (x as i32, y as i32);
-            let size = size as i32;
+            let r = r as i32;
 
             if x > 0 && x < width && y > 0 && y < height {
-                for dx in -size..size {
-                    for dy in -size..size {
+                for dx in -r..r {
+                    for dy in -r..r {
                         let src_x = x + dx;
                         let src_y = y + dy;
-                        if src_x >= 0 && src_x < width as i32 && src_y >= 0 && src_y < height as i32 {
+                        if src_x >= 0 && src_x < width && src_y >= 0 && src_y < height {
                             let src_pixel = self.original_image.get_pixel(src_x as u32, src_y as u32);
-                            self.screenshot.put_pixel(x as u32 + dx as u32, y as u32 + dy as u32, src_pixel);
+                            if (dx*dx + dy*dy) <= r*r {
+                                self.screenshot.put_pixel(src_x as u32, src_y as u32, src_pixel);
+                            }
                         }
                     }
                 }
             }
-             */
         }
 
 
