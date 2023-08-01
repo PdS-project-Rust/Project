@@ -3,14 +3,19 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Color32, Slider, Rect, Rounding, Stroke, Window, ComboBox, TopBottomPanel, Rgba, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, CursorIcon}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
+use std::process::exit;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::{Duration, Instant};
+use eframe::egui::{Frame, Slider};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{EncodableLayout, ImageFormat, DynamicImage};
+use image::{EncodableLayout, ImageFormat};
+use imageproc::drawing::draw_antialiased_line_segment_mut;
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
@@ -46,10 +51,12 @@ impl MyImage {
         });
 
         let available = ui.available_size();
+        println!("size: {:?}",available);
         let w = image.width() as f32;
         let h = image.height() as f32;
         let w_window = available.x;
         let h_window = available.y;
+        //gives the min between the height of the window and the height of the image scaled to the width of the window
         let height = h_window.min(w_window * h / w);
         let width = height * w / h;
         let fixed_dimensions = Vec2{x: width, y: height};
@@ -95,6 +102,7 @@ struct ScreenshotStr {
     brush_size: f32,
     highlighter_size: f32,
     eraser_size: f32,
+    upper_panel_size:Vec2,
 }
 
 impl Default for ScreenshotStr {
@@ -118,6 +126,7 @@ impl Default for ScreenshotStr {
             brush_size: 6.0,
             highlighter_size: 18.0,
             eraser_size: 16.0,
+            upper_panel_size:Vec2::new(0.0,0.0),
          }
     }
 }
@@ -144,19 +153,21 @@ impl ScreenshotStr {
         self.color_image = col_im;
     }
 
-    fn calculate_texture_coordinates(&self, cursor_pos: Pos2, ctx: &egui::Context) -> Pos2 {
-        let available = ctx.available_rect(); // Get the available rectangle for drawing
+    fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Pos2 {
         let w = self.screenshot.get_width().unwrap() as f32;
         let h = self.screenshot.get_height().unwrap() as f32;
-        let w_window = available.width();
-        let h_window = available.height();
-        let border = 35.0;
-        let height = (h_window - border).min(w_window * (h - border) / w);
+        println!("size window: {:?}",available);
+        let w_window = available.x;
+        let h_window = available.y;
+        let height = h_window.min(w_window * h / w);
+        println!("height scaled: {}, other: {}",(w_window * h / w),h_window);
+
+        println!("height: {}",height);
         let width = height * w / h;
         let h_scale = height / h;
         let w_scale = width / w;
-        let image_pos_x = (w_window - width) / 2.0;
-        let image_pos_y = (h_window - height) / 2.0;
+        let image_pos_x = (total_window.x - width) / 2.0;
+        let image_pos_y = self.upper_panel_size.y+h_window-height;
         let image_cursor_pos = Pos2 {
             x: (cursor_pos.x - image_pos_x) / w_scale,
             y: (cursor_pos.y - image_pos_y) / h_scale,
@@ -164,14 +175,16 @@ impl ScreenshotStr {
         image_cursor_pos
     }
 
-    fn draw_paint(&mut self, ctx: &egui::Context, size: f32, color: [u8;4]) {
-        ctx.input(|ui| {
-            let pos = ui.pointer.interact_pos();
+    fn draw_paint(&mut self, ctx: &egui::Context,available: Vec2, size: f32, color: [u8;4]) {
+        ctx.input(|is| {
+            let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
-                let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
+                let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
                 let x = texture_coordinates.x;
                 let y = texture_coordinates.y;
-                if ui.pointer.any_down() {
+                println!("coordinates from function: x {}, y {}",x,y);
+                if is.pointer.any_down() {
                     if self.starting_point.is_none() {
                         self.starting_point = Some((x, y));
                     } else {
@@ -194,15 +207,15 @@ impl ScreenshotStr {
         });
     }
 
-    fn draw_highlight(&mut self, ctx: &egui::Context, size: f32) {
-        ctx.input(|ui| {
-            let pos = ui.pointer.interact_pos();
+    fn draw_highlight(&mut self, ctx: &egui::Context,available: Vec2, size: f32) {
+        ctx.input(|is| {
+            let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
-                let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
                 let x = texture_coordinates.x;
                 let y = texture_coordinates.y;
 
-                if ui.pointer.any_down() {
+                if is.pointer.any_down() {
                     if self.starting_point.is_none() {
                         self.starting_point = Some((x, y));
                     } else {
@@ -222,15 +235,16 @@ impl ScreenshotStr {
                 } else {
                     self.starting_point = None;
                 }
+            }else{
+                self.starting_point = None;
             }
         });
     }
-
-    fn erase(&mut self, ctx: &egui::Context, size: f32) {
+    fn erase(&mut self, ctx: &egui::Context, available: Vec2, size: f32) {
         ctx.input(|ui| {
             let pos = ui.pointer.interact_pos();
             if let Some(pos) = pos {
-                let texture_coordinates = self.calculate_texture_coordinates(pos, ctx);
+                let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
                 let x = texture_coordinates.x;
                 let y = texture_coordinates.y;
 
@@ -249,20 +263,6 @@ impl ScreenshotStr {
 
 impl App for ScreenshotStr {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // drawing
-        match self.drawing_mode {
-            Some(DrawingMode::Paint) => {
-                let brush_color_rgba = [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255];
-                self.draw_paint(ctx, self.brush_size, brush_color_rgba);
-            }
-            Some(DrawingMode::Highlight) => {
-                self.draw_highlight(ctx, self.highlighter_size);
-            }
-            Some(DrawingMode::Erase) => {
-                self.erase(ctx, self.eraser_size);
-            }
-            _ => {}
-        }
 
         // save dialog
         if self.save_dialog {
@@ -343,7 +343,7 @@ impl App for ScreenshotStr {
 
             let timer_str = format!("{} Seconds", timer);
             let screen_str = format!("Screen {}", screen);
-            
+            self.upper_panel_size=ui.available_size();
             ui.horizontal(|ui| {
                 if ui.button("New Screenshot").clicked() {
                     let duration = Duration::from_secs(self.timer as u64);
@@ -402,12 +402,26 @@ impl App for ScreenshotStr {
             });
 
         });
-        CentralPanel::default().show(ctx, |ui| {
+            CentralPanel::default().frame(Frame::none()).show(ctx, |ui| {
             ui.with_layout(Layout::centered_and_justified(Direction::TopDown), |ui| {
                 if self.show_image {
+                    let available=ui.available_size();
                     let mut my_image = MyImage::new();
-                    my_image.ui_resize(ui, self.color_image.clone()); 
-                   
+                    my_image.ui_resize(ui, self.color_image.clone());
+                    // drawing
+                    match self.drawing_mode {
+                        Some(DrawingMode::Paint) => {
+                            let brush_color_rgba = [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255];
+                            self.draw_paint(ctx, available, self.brush_size, brush_color_rgba);
+                        }
+                        Some(DrawingMode::Highlight) => {
+                            self.draw_highlight(ctx, available, self.highlighter_size);
+                        }
+                        Some(DrawingMode::Erase) => {
+                            self.erase(ctx, available,self.eraser_size);
+                        }
+                        _ => {}
+                    }
                 }
             });
         });
