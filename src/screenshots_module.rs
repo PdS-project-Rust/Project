@@ -6,9 +6,8 @@ pub mod screenshot_module{
     use std::time::Duration;
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
-    use eframe::egui::Pos2;
-    use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage, ImageBuffer, imageops::overlay};
-    use imageproc::drawing::{Blend, draw_antialiased_line_segment_mut, draw_line_segment_mut};
+    use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
+    use imageproc::drawing::draw_line_segment_mut;
     use screenshots::Screen;
     use thiserror::Error;
 
@@ -115,7 +114,7 @@ pub mod screenshot_module{
             Screenshot::new(screen)
         }
 
-        pub fn draw_point(&mut self, x: i32, y: i32, r: u32, color: [u8;4]) {
+        pub fn _draw_point(&mut self, x: i32, y: i32, r: u32, color: [u8;4]) {
             let width = self.screenshot.width() as i32;
             let height = self.screenshot.height() as i32;
             let r = r as i32;
