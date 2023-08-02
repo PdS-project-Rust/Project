@@ -216,7 +216,7 @@ pub mod screenshot_module{
         }
 
 
-        pub fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
+        fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
             let alpha = foreground[3] as f32 / 255.0;
             let inv_alpha = 1.0 - alpha;
             let r = (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;

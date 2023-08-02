@@ -3,7 +3,7 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, CursorIcon}, egui::{Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, CursorIcon, Context, Rect, Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
@@ -52,12 +52,12 @@ impl MyImage {
         });
 
         let available = ui.available_size();
-        println!("size: {:?}",available);
+        // println!("size: {:?}",available);
         let w = image.width() as f32;
         let h = image.height() as f32;
         let w_window = available.x;
         let h_window = available.y;
-        //gives the min between the height of the window and the height of the image scaled to the width of the window
+        // gives the min between the height of the window and the height of the image scaled to the width of the window
         let height = h_window.min(w_window * h / w);
         let width = height * w / h;
         let fixed_dimensions = Vec2{x: width, y: height};
@@ -75,6 +75,7 @@ enum DrawingMode {
     Paint,
     Highlight,
     Erase,
+    Shape,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -93,7 +94,6 @@ struct ScreenshotStr {
     show_image:bool,
     save_dialog:bool,
     drawing_mode:Option<DrawingMode>,
-    shape_mode:bool,
     shape:Option<Shapes>,
     settings_dialog:bool,
     settings:Settings,
@@ -117,7 +117,6 @@ impl Default for ScreenshotStr {
             show_image:false,
             save_dialog:false,
             drawing_mode:None,
-            shape_mode:false,
             shape:None,
             settings_dialog:false,
             settings:Settings::default(),
@@ -263,6 +262,7 @@ impl ScreenshotStr {
             }
         })
     }
+
     fn erase(&mut self, ctx: &egui::Context, available: Vec2, size: f32) -> bool{
         ctx.input(|ui| -> bool{
             let pos = ui.pointer.interact_pos();
@@ -288,6 +288,41 @@ impl ScreenshotStr {
             return false;
         })
     }
+
+    pub fn draw_rectangle(&mut self, ctx: &mut Context, available: Vec2, starting_point: (f32, f32), ending_point: (f32, f32), color: Color32, size: f32, corner_radius: f32) {
+        ctx.input(|is| {
+            let pos = is.pointer.interact_pos();
+            if let Some(pos) = pos {
+                println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
+                let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
+                if texture_coordinates.is_some() {
+                    let texture_coordinates=texture_coordinates.unwrap();
+                    let x = texture_coordinates.x;
+                    let y = texture_coordinates.y;
+                    println!("coordinates from function: x {}, y {}",x,y);
+                    if is.pointer.any_down() {
+                        if self.starting_point.is_none() {
+                            self.starting_point = Some((x, y));
+                        } else {
+                            let rect = Rect::from_min_max(
+                                Pos2::new(self.starting_point.unwrap().0,self.starting_point.unwrap().1),
+                                Pos2::new(x, y));
+                            let stroke = Stroke::new(size, color);
+                            ctx.debug_painter().rect_stroke(rect, corner_radius, stroke);
+                            self.starting_point = Some((x, y));
+                            if Instant::now() > self.instant {
+                                self._convert_image();
+                                self.instant += Duration::from_millis(16);
+                            }
+                        }
+                    } else {
+                        self.starting_point = None;
+                    }
+                }
+            }
+        })
+    }
+
 
 }
 
@@ -495,9 +530,9 @@ impl App for ScreenshotStr {
 
                         // shapes
                         if ui.button("\u{2B55}").clicked() {
-                            self.shape_mode = !self.shape_mode;
+                            self.toggle_drawing_mode(DrawingMode::Erase);
                         }
-                        if self.shape_mode {
+                        if self.drawing_mode == Some(DrawingMode::Erase) {
                             //chose shape
                             ComboBox::from_label("Shape")
                                 .selected_text("Shape")
