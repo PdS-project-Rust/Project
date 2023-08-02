@@ -3,7 +3,7 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Rect, Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Rect, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
