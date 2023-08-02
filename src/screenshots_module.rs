@@ -251,11 +251,11 @@ pub mod screenshot_module{
 
             for dx in -half_size..=half_size {
                 let mut dy = dx;
-                if start.0 > end.0 {dy = -dx}
+                if (start.0 > end.0) ^ (start.1 > end.1) {dy = -dx} // XOR
                 let start = (start.0 - dx, start.1 - dy);
                 let end = (end.0 + dx, end.1 + dy);
-                let b = (end.0 - start.0) as i32;
-                let h = (end.1 - start.1) as i32;
+                let b = end.0 - start.0;
+                let h = end.1 - start.1;
 
                 if start.0 > 0 && start.0 < width && start.1 > 0 && start.1 < height && b.abs() > 0 && h.abs() > 0 {
                     let x0 = cmp::min(start.0, end.0);

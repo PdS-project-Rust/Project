@@ -216,10 +216,7 @@ impl ScreenshotStr {
                                 size,
                             );
                             self.starting_point = Some((x, y));
-                            if Instant::now() > self.instant {
-                                self._convert_image();
-                                self.instant += Duration::from_millis(16);
-                            }
+                            self.conversion();
                         }
                     } else {
                         self.starting_point = None;
@@ -257,10 +254,7 @@ impl ScreenshotStr {
                             let mut dx = 1.0;
                             if self.starting_point.unwrap().0 > x { dx = -1.0 }
                             self.starting_point = Some((x+dx, y));
-                            if Instant::now() > self.instant {
-                                self._convert_image();
-                                self.instant += Duration::from_millis(16);
-                            }
+                            self.conversion();
                         }
                     } else {
                         self.starting_point = None;
@@ -289,10 +283,7 @@ impl ScreenshotStr {
 
                     if ui.pointer.any_down() {
                         self.screenshot.erase_point(x, y, size);
-                        if Instant::now() > self.instant {
-                            self._convert_image();
-                            self.instant += Duration::from_millis(16);
-                        }
+                        self.conversion();
                     }
                     return true;
                 } else {
@@ -304,7 +295,7 @@ impl ScreenshotStr {
         })
     }
 
-    pub fn draw_rectangle(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) {
+    fn draw_rectangle(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) {
         ctx.input(|is| {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
@@ -321,13 +312,8 @@ impl ScreenshotStr {
                                 self.starting_point.unwrap().1 as f32,
                             );
                             let end = (x as f32, y as f32);
-                            println!("{}", size);
                             self.screenshot.rectangle(start, (x, y), size, color);
-
-                            if Instant::now() > self.instant {
-                                self._convert_image();
-                                self.instant += Duration::from_millis(16);
-                            }
+                            self.conversion();
                         }
                     } else {
                         if self.starting_point.is_some() {
@@ -337,11 +323,7 @@ impl ScreenshotStr {
                             );
                             let end = (x as f32, y as f32);
                             self.screenshot.rectangle(start, (x, y), size, color);
-
-                            if Instant::now() > self.instant {
-                                self._convert_image();
-                                self.instant += Duration::from_millis(16);
-                            }
+                            self.conversion();
                         }
                         self.starting_point = None;
                         self.screenshot.save_intermediate_image().unwrap();
@@ -351,6 +333,13 @@ impl ScreenshotStr {
                 }
             }
         });
+    }
+
+    fn conversion(&mut self) {
+        if Instant::now() > self.instant {
+            self._convert_image();
+            self.instant += Duration::from_millis(16);
+        }
     }
 
 }
