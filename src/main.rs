@@ -154,7 +154,7 @@ impl ScreenshotStr {
         self.color_image = col_im;
     }
 
-    fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Pos2 {
+    fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Option<Pos2> {
         let w = self.screenshot.get_width().unwrap() as f32;
         let h = self.screenshot.get_height().unwrap() as f32;
         println!("size window: {:?}",available);
@@ -176,92 +176,117 @@ impl ScreenshotStr {
             x: (cursor_pos.x - image_pos_x)/w_scale,
             y: (cursor_pos.y - image_pos_y)/h_scale,
         };
-        image_cursor_pos
+        if image_cursor_pos.x>w || image_cursor_pos.y>h || image_cursor_pos.y < 0.0 || image_cursor_pos.x < 0.0 {
+            None
+        }else{
+            Some(image_cursor_pos)
+        }
     }
 
-    fn draw_paint(&mut self, ctx: &egui::Context,available: Vec2, size: f32, color: [u8;4]) {
-        ctx.input(|is| {
+    fn draw_paint(&mut self, ctx: &egui::Context,available: Vec2, size: f32, color: [u8;4]) -> bool {
+        ctx.input(|is| -> bool {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
                 println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
                 let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
-                let x = texture_coordinates.x;
-                let y = texture_coordinates.y;
-                println!("coordinates from function: x {}, y {}",x,y);
-                if is.pointer.any_down() {
-                    if self.starting_point.is_none() {
-                        self.starting_point = Some((x, y));
-                    } else {
-                        self.screenshot.draw_line(
-                            self.starting_point.unwrap(),
-                            (x, y),
-                            color,
-                            size,
-                        );
-                        self.starting_point = Some((x, y));
-                        if Instant::now() > self.instant {
-                            self._convert_image();
-                            self.instant += Duration::from_millis(16);
+                if texture_coordinates.is_some() {
+                    let texture_coordinates=texture_coordinates.unwrap();
+                    let x = texture_coordinates.x;
+                    let y = texture_coordinates.y;
+                    println!("coordinates from function: x {}, y {}",x,y);
+                    if is.pointer.any_down() {
+                        if self.starting_point.is_none() {
+                            self.starting_point = Some((x, y));
+                        } else {
+                            self.screenshot.draw_line(
+                                self.starting_point.unwrap(),
+                                (x, y),
+                                color,
+                                size,
+                            );
+                            self.starting_point = Some((x, y));
+                            if Instant::now() > self.instant {
+                                self._convert_image();
+                                self.instant += Duration::from_millis(16);
+                            }
                         }
+                    } else {
+                        self.starting_point = None;
                     }
-                } else {
-                    self.starting_point = None;
+                    return true;
+                }else{
+                    return false;
                 }
             }
-        });
+            return false;
+        })
     }
 
-    fn draw_highlight(&mut self, ctx: &egui::Context,available: Vec2, size: f32) {
-        ctx.input(|is| {
+    fn draw_highlight(&mut self, ctx: &egui::Context,available: Vec2, size: f32) -> bool {
+        ctx.input(|is| -> bool {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
                 println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
                 let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
-                let x = texture_coordinates.x;
-                let y = texture_coordinates.y;
-                println!("coordinates from function: x {}, y {}",x,y);
-                if is.pointer.any_down() {
-                    if self.starting_point.is_none() {
-                        self.starting_point = Some((x, y));
-                    } else {
-                        self.screenshot.highlight_line(
-                            self.starting_point.unwrap(),
-                            (x, y),
-                            size,
-                        );
-                        let mut dx = 1.0;
-                        if self.starting_point.unwrap().0 > x { dx = -1.0 }
-                        self.starting_point = Some((x+dx, y));
-                        if Instant::now() > self.instant {
-                            self._convert_image();
-                            self.instant += Duration::from_millis(16);
+                if texture_coordinates.is_some() {
+                    let texture_coordinates=texture_coordinates.unwrap();
+                    let x = texture_coordinates.x;
+                    let y = texture_coordinates.y;
+                    println!("coordinates from function: x {}, y {}",x,y);
+                    if is.pointer.any_down() {
+                        if self.starting_point.is_none() {
+                            self.starting_point = Some((x, y));
+                        } else {
+                            self.screenshot.highlight_line(
+                                self.starting_point.unwrap(),
+                                (x, y),
+                                size,
+                            );
+                            let mut dx = 1.0;
+                            if self.starting_point.unwrap().0 > x { dx = -1.0 }
+                            self.starting_point = Some((x+dx, y));
+                            if Instant::now() > self.instant {
+                                self._convert_image();
+                                self.instant += Duration::from_millis(16);
+                            }
                         }
+                    } else {
+                        self.starting_point = None;
                     }
-                } else {
-                    self.starting_point = None;
+                    return true;
+                }else{
+                    return false;
                 }
             }else{
                 self.starting_point = None;
+                return false;
             }
-        });
+        })
     }
-    fn erase(&mut self, ctx: &egui::Context, available: Vec2, size: f32) {
-        ctx.input(|ui| {
+    fn erase(&mut self, ctx: &egui::Context, available: Vec2, size: f32) -> bool{
+        ctx.input(|ui| -> bool{
             let pos = ui.pointer.interact_pos();
             if let Some(pos) = pos {
                 let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
-                let x = texture_coordinates.x;
-                let y = texture_coordinates.y;
+                if texture_coordinates.is_some(){
+                    let texture_coordinates=texture_coordinates.unwrap();
+                    let x = texture_coordinates.x;
+                    let y = texture_coordinates.y;
 
-                if ui.pointer.any_down() {
-                    self.screenshot.erase_point(x, y, size);
-                    if Instant::now() > self.instant {
-                        self._convert_image();
-                        self.instant += Duration::from_millis(16);
+                    if ui.pointer.any_down() {
+                        self.screenshot.erase_point(x, y, size);
+                        if Instant::now() > self.instant {
+                            self._convert_image();
+                            self.instant += Duration::from_millis(16);
+                        }
                     }
+                    return true;
+                }else{
+                    return false;
                 }
             }
-        });
+            return false;
+        })
     }
 
 }
@@ -511,16 +536,35 @@ impl App for ScreenshotStr {
                         // drawing
                         match self.drawing_mode {
                             Some(DrawingMode::Paint) => {
-                                ctx.set_cursor_icon(egui::CursorIcon::Crosshair);
                                 let brush_color_rgba = [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255];
-                                self.draw_paint(ctx, available, self.brush_size, brush_color_rgba);
+                                match self.draw_paint(ctx, available, self.brush_size, brush_color_rgba){
+                                    true=>{
+                                        ctx.set_cursor_icon(CursorIcon::Crosshair);
+                                    },
+                                    false=>{
+                                        ctx.set_cursor_icon(CursorIcon::Default);
+                                    }
+                                }
                             }
                             Some(DrawingMode::Highlight) => {
-                                ctx.set_cursor_icon(egui::CursorIcon::VerticalText);
-                                self.draw_highlight(ctx, available, self.highlighter_size);
+                                match self.draw_highlight(ctx, available, self.highlighter_size)  {
+                                    true=>{
+                                        ctx.set_cursor_icon(egui::CursorIcon::VerticalText);
+                                    },
+                                    false=>{
+                                        ctx.set_cursor_icon(CursorIcon::Default);
+                                    }
+                                }
                             }
                             Some(DrawingMode::Erase) => {
-                                self.erase(ctx, available,self.eraser_size);
+                                match self.erase(ctx, available,self.eraser_size) {
+                                    true=>{
+                                        ctx.set_cursor_icon(CursorIcon::NotAllowed);
+                                    },
+                                    false=>{
+                                        ctx.set_cursor_icon(CursorIcon::Default);
+                                    }
+                                }
                             }
                             _ => {}
                         }
