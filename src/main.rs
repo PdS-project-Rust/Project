@@ -530,9 +530,9 @@ impl App for ScreenshotStr {
 
                         // shapes
                         if ui.button("\u{2B55}").clicked() {
-                            self.toggle_drawing_mode(DrawingMode::Erase);
+                            self.toggle_drawing_mode(DrawingMode::Shape);
                         }
-                        if self.drawing_mode == Some(DrawingMode::Erase) {
+                        if self.drawing_mode == Some(DrawingMode::Shape) {
                             //chose shape
                             ComboBox::from_label("Shape")
                                 .selected_text("Shape")
