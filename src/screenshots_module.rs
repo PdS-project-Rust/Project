@@ -7,9 +7,10 @@ pub mod screenshot_module{
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
     use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
-    use imageproc::drawing::draw_line_segment_mut;
+    use imageproc::drawing::{draw_line_segment_mut, draw_text_mut};
     use screenshots::Screen;
     use thiserror::Error;
+    use rusttype::{Scale, Font};
 
     #[derive(Error,Debug)]
     enum ScreenShotError{
@@ -226,5 +227,30 @@ pub mod screenshot_module{
             Rgba([r, g, b, a])
         }
 
+        pub fn draw_text(&mut self, text: &String, x: f32, y: f32, color: [u8; 3], font_size: f32) {
+            // Load a font.
+            let mut dy =0;
+            let lines = text.split("\n");
+            for line in lines {
+                dy += (font_size*1.2 + 5.0) as i32;
+                let scale = Scale {
+                    x: font_size*2.0,
+                    y: font_size*2.0,
+                };
+                let font = Vec::from(include_bytes!("../fonts/ARIALN.TTF") as &[u8]);
+                let font = Font::try_from_vec(font).unwrap();
+                let color_rgba: [u8; 4] = [color[0], color[1], color[2], 255];
+                draw_text_mut(&mut self.screenshot,
+                    Rgba::from(color_rgba),
+                    x as i32,
+                    y as i32 + dy as i32,
+                    scale,
+                    &font,
+                    line
+                );
+
+            }
+        }
     }
+
 }
