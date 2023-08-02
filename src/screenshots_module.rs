@@ -9,10 +9,11 @@ pub mod screenshot_module{
     use chrono::Local;
     use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
     use image::DynamicImage::ImageRgb8;
-    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect, draw_hollow_rect_mut};
+    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect, draw_hollow_rect_mut, draw_text_mut};
     use imageproc::rect::Rect;
     use screenshots::Screen;
     use thiserror::Error;
+    use rusttype::{Scale, Font};
     use crate::egui::Color32;
 
     #[derive(Error,Debug)]
@@ -126,6 +127,21 @@ pub mod screenshot_module{
             Screenshot::new(screen)
         }
 
+        pub fn save_intermediate_image(&mut self) -> Result<(), Box<dyn Error>> {
+            self.intermediate_image = self.screenshot.clone();
+            Ok(())
+        }
+
+        pub fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
+            let alpha = foreground[3] as f32 / 255.0;
+            let inv_alpha = 1.0 - alpha;
+            let r = (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
+            let g = (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
+            let b = (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
+            let a = background[3];
+            Rgba([r, g, b, a])
+        }
+
         pub fn draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8;4]) {
             let width = self.screenshot.width() as i32;
             let height = self.screenshot.height() as i32;
@@ -233,39 +249,51 @@ pub mod screenshot_module{
 
             self.screenshot = self.intermediate_image.clone();
 
-            for d in -half_size..=half_size {
-                let start = (start.0 + d, start.1 + d);
-                let end = (end.0 - d, end.1 - d);
-                let b = (end.0 - start.0) as f32;
-                let h = (end.1 - start.1) as f32;
+            for dx in -half_size..=half_size {
+                let mut dy = dx;
+                if start.0 > end.0 {dy = -dx}
+                let start = (start.0 - dx, start.1 - dy);
+                let end = (end.0 + dx, end.1 + dy);
+                let b = (end.0 - start.0) as i32;
+                let h = (end.1 - start.1) as i32;
 
-                if start.0 > 0 && start.0 < width && start.1 > 0 && start.1 < height && b.abs() > 0.0 && h.abs() > 0.0 {
+                if start.0 > 0 && start.0 < width && start.1 > 0 && start.1 < height && b.abs() > 0 && h.abs() > 0 {
                     let x0 = cmp::min(start.0, end.0);
                     let y0 = cmp::min(start.1, end.1);
                     let x1 = cmp::max(start.0, end.0);
                     let y1 = cmp::max(start.1, end.1);
 
-                    let rect = Rect::at(x0 as i32, y0 as i32).of_size(b.abs() as u32, h.abs() as u32);
+                    let rect = Rect::at(x0, y0).of_size(b.abs() as u32, h.abs() as u32);
                     draw_hollow_rect_mut(&mut self.screenshot, rect, color_rgba);
                 }
             }
         }
 
 
-        pub fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
-            let alpha = foreground[3] as f32 / 255.0;
-            let inv_alpha = 1.0 - alpha;
-            let r = (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
-            let g = (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
-            let b = (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
-            let a = background[3];
-            Rgba([r, g, b, a])
-        }
+        pub fn draw_text(&mut self, text: &String, x: f32, y: f32, color: [u8; 3], font_size: f32) {
+            // Load a font.
+            let mut dy =0;
+            let lines = text.split("\n");
+            for line in lines {
+                dy += (font_size*1.2 + 5.0) as i32;
+                let scale = Scale {
+                    x: font_size*2.0,
+                    y: font_size*2.0,
+                };
+                let font = Vec::from(include_bytes!("../fonts/ARIALN.TTF") as &[u8]);
+                let font = Font::try_from_vec(font).unwrap();
+                let color_rgba: [u8; 4] = [color[0], color[1], color[2], 255];
+                draw_text_mut(&mut self.screenshot,
+                    Rgba::from(color_rgba),
+                    x as i32,
+                    y as i32 + dy as i32,
+                    scale,
+                    &font,
+                    line
+                );
 
-        pub fn save_intermediate_image(&mut self) -> Result<(), Box<dyn Error>> {
-            self.intermediate_image = self.screenshot.clone();
-            Ok(())
+            }
         }
-
     }
+
 }

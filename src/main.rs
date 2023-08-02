@@ -3,15 +3,12 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, CursorIcon, Context, Rect, Window, ComboBox, TopBottomPanel, self}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Rect, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
-use std::process::exit;
-use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::{Duration, Instant};
-use eframe::egui::{Color32, Frame, Margin, Rgba, Rounding, Slider};
+use eframe::egui::{Color32, Frame, Margin, Rgba, Slider};
 use eframe::epaint::{Shadow, Stroke};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
@@ -28,11 +25,14 @@ fn build_gui() -> () {
         ..Default::default()
     };
 
+
     println!("Starting app");
     eframe::run_native(
         "Screen Capture",
         options,
-        Box::new(|_cc| Box::<ScreenshotStr>::default()),
+        Box::new(|_cc| {
+            Box::<ScreenshotStr>::new(ScreenshotStr::default())
+        }),
     ).unwrap();
 }
 
@@ -94,6 +94,12 @@ struct ScreenshotStr {
     show_image:bool,
     save_dialog:bool,
     drawing_mode:Option<DrawingMode>,
+    text_mode: bool,
+    text_color: [u8;3],
+    text_size: f32,
+    text_edit_dialog: bool,
+    text_edit_dialog_position: Pos2,
+    text: String,
     shape:Option<Shapes>,
     settings_dialog:bool,
     settings:Settings,
@@ -117,6 +123,12 @@ impl Default for ScreenshotStr {
             show_image:false,
             save_dialog:false,
             drawing_mode:None,
+            text_mode: false,
+            text_color: [255, 0, 0],
+            text_size: 16.0,
+            text_edit_dialog: false,
+            text_edit_dialog_position: Pos2::new(0.0,0.0),
+            text: String::new(),
             shape:None,
             settings_dialog:false,
             settings:Settings::default(),
@@ -417,6 +429,46 @@ impl App for ScreenshotStr {
                 });
         }
 
+        // text edit window
+        if self.text_edit_dialog {
+            //text edit window without titlebar
+            Window::new("TextEdit")
+                .default_pos(self.text_edit_dialog_position)
+                .title_bar(false)
+                .collapsible(false)
+                .resizable(true)
+                //slightly transparent but with borders
+                .frame(
+                    egui::Frame {
+                        fill: Color32::TRANSPARENT,
+                        stroke: Stroke::new(1.0, Color32::WHITE),
+                        ..Default::default()
+                    })
+                .show(ctx, |ui| {
+                    ui.add(
+                        TextEdit::multiline(&mut self.text)
+                        .font(egui::FontId::proportional(self.text_size))
+                        .text_color(Color32::from_rgb(self.text_color[0], self.text_color[1], self.text_color[2]))
+                        .frame(false)
+                    );
+
+                    // println!("textedit size: {:?}", ui.available_size());
+                    let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
+                    let shift_pressed = ctx.input(|is| is.modifiers.shift);
+                    if enter_pressed && shift_pressed  {
+                        //add new line
+                        self.text = format!("{}\n", self.text);
+                    } else if enter_pressed {
+                        self.text_edit_dialog=false;
+                        let textbox_pos = self.text_edit_dialog_position;
+                        self.screenshot.draw_text(&self.text, textbox_pos.x, textbox_pos.y, self.text_color, self.text_size);
+                        self._convert_image();
+
+                    }
+
+                });
+
+        }
         // header of the app
         TopBottomPanel::top("header").frame(
             egui::Frame {
@@ -562,7 +614,14 @@ impl App for ScreenshotStr {
 
                         // text
                         if ui.button("\u{1F1F9}").clicked() {
+                            self.text_mode = !self.text_mode;
+                        }
+                        if self.text_mode {
+                            //chose size with drag value
+                            ui.add(DragValue::new(&mut self.text_size).speed(1.0).clamp_range(1.0..=100.0));
 
+                            //chose color
+                            ui.color_edit_button_srgb(&mut self.text_color);
                         }
 
                         // undo
@@ -624,9 +683,22 @@ impl App for ScreenshotStr {
                             _ => {}
                         }
                     }
+
+                    // if text mode is active and if image is clicked open text dialog
+                    if self.text_mode && self.show_image {
+                        ctx.input(|ui| {
+                            if ui.pointer.any_down() && !self.text_edit_dialog {
+                                self.text_edit_dialog = true;
+                                self.text_edit_dialog_position = ui.pointer.interact_pos().unwrap();
+                                println!("text edit dialog opened");
+                                println!("text edit dialog position: {:?}", self.text_edit_dialog_position);
+                            }
+                        });
+                    }
                 });
             });
     }
+
 }
 
 fn main() {
