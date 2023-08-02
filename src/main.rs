@@ -11,12 +11,12 @@ use std::process::exit;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use eframe::egui::{Color32, Frame, Margin, Rounding, Slider};
+use eframe::egui::{Color32, Frame, Margin, Rgba, Rounding, Slider};
 use eframe::epaint::{Shadow, Stroke};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{EncodableLayout, ImageFormat};
-use imageproc::drawing::draw_antialiased_line_segment_mut;
+use image::{EncodableLayout, ImageFormat, GenericImageView, DynamicImage};
+use imageproc::drawing::{draw_antialiased_line_segment_mut, draw_hollow_rect};
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
@@ -99,10 +99,10 @@ struct ScreenshotStr {
     settings:Settings,
     instant:Instant,
     starting_point:Option<(f32, f32)>,
-    brush_color: [u8;3],
-    brush_size: f32,
-    highlighter_size: f32,
-    eraser_size: f32,
+    brush_color:[u8;3],
+    brush_size:f32,
+    highlighter_size:f32,
+    eraser_size:f32,
     upper_panel_size:Vec2,
 }
 
@@ -156,20 +156,20 @@ impl ScreenshotStr {
     fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Option<Pos2> {
         let w = self.screenshot.get_width().unwrap() as f32;
         let h = self.screenshot.get_height().unwrap() as f32;
-        println!("size window: {:?}",available);
+        //println!("size window: {:?}",available);
         //x is 640 out of 640, y is 356 out of 400 (-22*2 equal to borders+top and bottom)
         let w_window = available.x;
         let h_window = available.y;
         let height = h_window.min(w_window * h / w);
-        println!("height scaled: {}, other: {}",(w_window * h / w),h_window);
-        println!("height: {}",height);
-        println!("{}",self.upper_panel_size.y);
+        //println!("height scaled: {}, other: {}",(w_window * h / w),h_window);
+        //println!("height: {}",height);
+        //println!("{}",self.upper_panel_size.y);
         let width = height * w / h;
         let h_scale = height / h;
         let w_scale = width / w;
         let image_pos_x = (total_window.x - width) / 2.0;
-        println!("{:?}",Margin::same(1.0).sum());
-        println!("cursor pos: {:?}",cursor_pos);
+        //println!("{:?}",Margin::same(1.0).sum());
+        //println!("cursor pos: {:?}",cursor_pos);
         let image_pos_y = self.upper_panel_size.y + Margin::same(1.0).sum().y +(h_window-height)/2.0;
         let image_cursor_pos = Pos2 {
             x: (cursor_pos.x - image_pos_x)/w_scale,
@@ -213,7 +213,8 @@ impl ScreenshotStr {
                         self.starting_point = None;
                     }
                     return true;
-                }else{
+                } else {
+                    self.starting_point = None;
                     return false;
                 }
             }
@@ -225,13 +226,13 @@ impl ScreenshotStr {
         ctx.input(|is| -> bool {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
-                println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
+                //println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
                 let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
                 if texture_coordinates.is_some() {
                     let texture_coordinates=texture_coordinates.unwrap();
                     let x = texture_coordinates.x;
                     let y = texture_coordinates.y;
-                    println!("coordinates from function: x {}, y {}",x,y);
+                    //println!("coordinates from function: x {}, y {}",x,y);
                     if is.pointer.any_down() {
                         if self.starting_point.is_none() {
                             self.starting_point = Some((x, y));
@@ -253,7 +254,8 @@ impl ScreenshotStr {
                         self.starting_point = None;
                     }
                     return true;
-                }else{
+                } else {
+                    self.starting_point = None;
                     return false;
                 }
             }else{
@@ -281,48 +283,63 @@ impl ScreenshotStr {
                         }
                     }
                     return true;
-                }else{
+                } else {
                     return false;
                 }
             }
+            self.starting_point = None;
             return false;
         })
     }
 
-    pub fn draw_rectangle(&mut self, ctx: &mut Context, available: Vec2, starting_point: (f32, f32), ending_point: (f32, f32), color: Color32, size: f32, corner_radius: f32) {
+    pub fn draw_rectangle(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) {
         ctx.input(|is| {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
-                println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
-                let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
-                if texture_coordinates.is_some() {
-                    let texture_coordinates=texture_coordinates.unwrap();
+                let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
+                if let Some(texture_coordinates) = texture_coordinates {
                     let x = texture_coordinates.x;
                     let y = texture_coordinates.y;
-                    println!("coordinates from function: x {}, y {}",x,y);
                     if is.pointer.any_down() {
                         if self.starting_point.is_none() {
                             self.starting_point = Some((x, y));
                         } else {
-                            let rect = Rect::from_min_max(
-                                Pos2::new(self.starting_point.unwrap().0,self.starting_point.unwrap().1),
-                                Pos2::new(x, y));
-                            let stroke = Stroke::new(size, color);
-                            ctx.debug_painter().rect_stroke(rect, corner_radius, stroke);
-                            self.starting_point = Some((x, y));
+                            let start = (
+                                self.starting_point.unwrap().0 as f32,
+                                self.starting_point.unwrap().1 as f32,
+                            );
+                            let end = (x as f32, y as f32);
+                            println!("{}", size);
+                            self.screenshot.rectangle(start, (x, y), size, color);
+
                             if Instant::now() > self.instant {
                                 self._convert_image();
                                 self.instant += Duration::from_millis(16);
                             }
                         }
                     } else {
+                        if self.starting_point.is_some() {
+                            let start = (
+                                self.starting_point.unwrap().0 as f32,
+                                self.starting_point.unwrap().1 as f32,
+                            );
+                            let end = (x as f32, y as f32);
+                            self.screenshot.rectangle(start, (x, y), size, color);
+
+                            if Instant::now() > self.instant {
+                                self._convert_image();
+                                self.instant += Duration::from_millis(16);
+                            }
+                        }
                         self.starting_point = None;
+                        self.screenshot.save_intermediate_image().unwrap();
                     }
+                } else {
+                    self.starting_point = None;
                 }
             }
-        })
+        });
     }
-
 
 }
 
@@ -531,6 +548,7 @@ impl App for ScreenshotStr {
                         // shapes
                         if ui.button("\u{2B55}").clicked() {
                             self.toggle_drawing_mode(DrawingMode::Shape);
+                            self.screenshot.save_intermediate_image().unwrap();
                         }
                         if self.drawing_mode == Some(DrawingMode::Shape) {
                             //chose shape
@@ -571,8 +589,7 @@ impl App for ScreenshotStr {
                         // drawing
                         match self.drawing_mode {
                             Some(DrawingMode::Paint) => {
-                                let brush_color_rgba = [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255];
-                                match self.draw_paint(ctx, available, self.brush_size, brush_color_rgba){
+                                match self.draw_paint(ctx, available, self.brush_size, [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255]){
                                     true=>{
                                         ctx.set_cursor_icon(CursorIcon::Crosshair);
                                     },
@@ -592,7 +609,7 @@ impl App for ScreenshotStr {
                                 }
                             }
                             Some(DrawingMode::Erase) => {
-                                match self.erase(ctx, available,self.eraser_size) {
+                                match self.erase(ctx, available, self.eraser_size) {
                                     true=>{
                                         ctx.set_cursor_icon(CursorIcon::NotAllowed);
                                     },
@@ -600,6 +617,9 @@ impl App for ScreenshotStr {
                                         ctx.set_cursor_icon(CursorIcon::Default);
                                     }
                                 }
+                            }
+                            Some(DrawingMode::Shape) => {
+                                self.draw_rectangle(ctx, available, self.brush_size, [self.brush_color[0],self.brush_color[1],self.brush_color[2], 255])
                             }
                             _ => {}
                         }
