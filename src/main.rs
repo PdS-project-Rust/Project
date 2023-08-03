@@ -3,17 +3,16 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Rect, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
-use eframe::egui::{Color32, Frame, Margin, Rgba, Slider};
-use eframe::epaint::{Shadow, Stroke};
+use eframe::egui::{Color32, Frame, Margin, Slider};
+use eframe::epaint::{Stroke};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{EncodableLayout, ImageFormat, GenericImageView, DynamicImage};
-use imageproc::drawing::{draw_antialiased_line_segment_mut, draw_hollow_rect};
+use image::{EncodableLayout, ImageFormat, GenericImageView};
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
@@ -224,7 +223,6 @@ impl ScreenshotStr {
                     return true;
                 } else {
                     self.starting_point = None;
-                    return false;
                 }
             }
             return false;
@@ -262,12 +260,11 @@ impl ScreenshotStr {
                     return true;
                 } else {
                     self.starting_point = None;
-                    return false;
                 }
             }else{
                 self.starting_point = None;
-                return false;
             }
+            return false;
         })
     }
 
@@ -286,8 +283,6 @@ impl ScreenshotStr {
                         self.conversion();
                     }
                     return true;
-                } else {
-                    return false;
                 }
             }
             self.starting_point = None;
@@ -308,21 +303,21 @@ impl ScreenshotStr {
                             self.starting_point = Some((x, y));
                         } else {
                             let start = (
-                                self.starting_point.unwrap().0 as f32,
-                                self.starting_point.unwrap().1 as f32,
+                                self.starting_point.unwrap().0,
+                                self.starting_point.unwrap().1,
                             );
-                            let end = (x as f32, y as f32);
-                            self.screenshot.rectangle(start, (x, y), size, color);
+                            let end = (x, y);
+                            self.screenshot.rectangle(start, end, size, color);
                             self.conversion();
                         }
                     } else {
                         if self.starting_point.is_some() {
                             let start = (
-                                self.starting_point.unwrap().0 as f32,
-                                self.starting_point.unwrap().1 as f32,
+                                self.starting_point.unwrap().0,
+                                self.starting_point.unwrap().1,
                             );
-                            let end = (x as f32, y as f32);
-                            self.screenshot.rectangle(start, (x, y), size, color);
+                            let end = (x, y);
+                            self.screenshot.rectangle(start, end, size, color);
                             self.conversion();
                         }
                         self.starting_point = None;
