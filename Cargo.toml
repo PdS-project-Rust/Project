@@ -18,9 +18,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 imageproc = "0.23.0"
 rusttype = "0.9.3"
-
-[profile.dev]
-opt-level = 3
+poll-promise = "0.2.0"
 
 [profile.release]
 opt-level = 3

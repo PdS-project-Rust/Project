@@ -6,7 +6,7 @@ mod settings_module;
 use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Rect, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
-use std::path::PathBuf;
+use std::{path::PathBuf, thread};
 use std::time::{Duration, Instant};
 use eframe::egui::{Color32, Frame, Margin, Slider};
 use eframe::epaint::Stroke;
@@ -109,6 +109,7 @@ struct ScreenshotStr {
     highlighter_size: f32,
     eraser_size: f32,
     upper_panel_size:Vec2,
+    test:bool,
 }
 
 impl Default for ScreenshotStr {
@@ -138,6 +139,7 @@ impl Default for ScreenshotStr {
             highlighter_size: 18.0,
             eraser_size: 16.0,
             upper_panel_size:Vec2::new(0.0,0.0),
+            test:false,
          }
     }
 }
@@ -338,7 +340,7 @@ impl ScreenshotStr {
 }
 
 impl App for ScreenshotStr {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         // save dialog
         if self.save_dialog {
             Window::new("Save Screenshot")
@@ -467,12 +469,27 @@ impl App for ScreenshotStr {
             let timer_str = format!("{} Seconds", timer);
             let screen_str = format!("Screen {}", screen);
             self.upper_panel_size=ui.available_size();
-            ui.horizontal(|ui| {
-                if ui.button("New Screenshot").clicked() {
-                    let duration = Duration::from_secs(self.timer as u64);
+            if self.test {
+                let duration = Duration::from_secs(self.timer as u64);
+                if frame.info().window_info.focused {
+                    println!("now minimized");
                     self.screenshot=api_mod::take_screenshot(duration,self.screen);
                     self._convert_image();
                     self.show_image=true;
+                    frame.set_minimized(false);
+                    self.test=false;
+                
+                } else {
+                    println!("not minimized");
+                    thread::sleep(Duration::from_millis(10));
+                }
+            }
+
+
+            ui.horizontal(|ui| {
+                if ui.button("New Screenshot").clicked() {
+                    frame.set_minimized(true);
+                    self.test = true;
                 }
 
                 ui.separator();
