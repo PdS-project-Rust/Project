@@ -446,12 +446,14 @@ impl App for ScreenshotStr {
                                 }
                            }
                             Some(DrawingMode::Crop)=>{
-                                let coordinates=self.draw_rectangle(ctx,available,2.0,[255,255,255,255]);
-                                if coordinates.is_some(){
+                                let coordinates= self.draw_rectangle(ctx, available,2.0,[255,255,255,255]);
+                                if coordinates.is_some() {
                                     let coordinates=coordinates.unwrap();
+                                    let height = coordinates.0.1 - coordinates.1.1;
+                                    let width = coordinates.0.0 - coordinates.1.0;
                                     let min_x=cmp::min(coordinates.0.0 as u32,coordinates.1.0 as u32);
                                     let min_y=cmp::min(coordinates.0.1 as u32,coordinates.1.1 as u32);
-                                    self.screenshot.resize_image(min_x+2, min_y+2, (coordinates.0.1 - coordinates.1.1).abs() as i32 -4, (coordinates.0.0 - coordinates.1.0).abs() as i32 -4).unwrap();
+                                    self.screenshot.resize_image(min_x+2, min_y+2, height.abs() as i32 -4, width.abs() as i32 -4).unwrap();
                                     self._convert_image();
                                 }
                             }
