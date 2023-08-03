@@ -1,5 +1,5 @@
 pub mod state_module{
-    use eframe::{egui::{Context}, egui, epaint::{ColorImage, Vec2, Pos2}};
+    use eframe::{egui::{Context}, epaint::{ColorImage, Vec2, Pos2}};
     use std::time::{Duration, Instant};
     use eframe::egui::{Margin};
     use image::{EncodableLayout, ImageFormat};
@@ -124,7 +124,7 @@ pub mod state_module{
             }
         }
 
-        pub fn draw_paint(&mut self, ctx: &egui::Context, available: Vec2, size: f32, color: [u8;4]) -> bool {
+        pub fn draw_paint(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) -> bool {
             ctx.input(|is| -> bool {
                 let pos = is.pointer.interact_pos();
                 if let Some(pos) = pos {
@@ -158,7 +158,7 @@ pub mod state_module{
             })
         }
 
-        pub fn draw_highlight(&mut self, ctx: &egui::Context, available: Vec2, size: f32, color: [u8;3]) -> bool {
+        pub fn draw_highlight(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;3]) -> bool {
             ctx.input(|is| -> bool {
                 let pos = is.pointer.interact_pos();
                 if let Some(pos) = pos {
@@ -196,7 +196,7 @@ pub mod state_module{
             })
         }
 
-        pub fn erase(&mut self, ctx: &egui::Context, available: Vec2, size: f32) -> bool{
+        pub fn erase(&mut self, ctx: &Context, available: Vec2, size: f32) -> bool{
             ctx.input(|ui| -> bool{
                 let pos = ui.pointer.interact_pos();
                 if let Some(pos) = pos {
@@ -237,7 +237,7 @@ pub mod state_module{
                                 let end = (x, y);
                                 self.screenshot.rectangle(start, end, size, color);
                                 self.conversion();
-                                return Option::None;
+                                return None;
                             }
                         } else {
                             if self.starting_point.is_some() {
@@ -250,7 +250,7 @@ pub mod state_module{
                                 self.conversion();
                                 let tmp=self.starting_point.take().unwrap();
                                 self.screenshot.save_intermediate_image().unwrap();
-                                return Option::Some((tmp,(x,y)));
+                                return Some((tmp,(x,y)));
                             }
                             return None;
                         }
@@ -258,7 +258,7 @@ pub mod state_module{
                         self.starting_point = None;
                     }
                 }
-                return Option::None;
+                return None;
             });
         }
 

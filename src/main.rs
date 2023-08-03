@@ -12,7 +12,7 @@ use eframe::egui::{Color32, Frame, Margin, Slider};
 use eframe::epaint::Stroke;
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{EncodableLayout, ImageFormat};
+use image::{ImageFormat};
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::settings_module::settings_module::*;
 use crate::state_module::state_module::{DrawingMode, ScreenshotStr, Shape};
@@ -152,7 +152,7 @@ impl App for ScreenshotStr {
                 .resizable(true)
                 //slightly transparent but with borders
                 .frame(
-                    egui::Frame {
+                    Frame {
                         fill: Color32::TRANSPARENT,
                         stroke: Stroke::new(1.0, Color32::WHITE),
                         ..Default::default()
@@ -184,7 +184,7 @@ impl App for ScreenshotStr {
         
         // header of the app
         TopBottomPanel::top("header").frame(
-            egui::Frame {
+            Frame {
                 inner_margin: Margin::same(1.0),
                 outer_margin: Margin::same(0.0),
                 fill: ctx.style().visuals.panel_fill,
@@ -271,7 +271,7 @@ impl App for ScreenshotStr {
 // footer of the app
         TopBottomPanel::bottom("footer")
             .frame(
-                egui::Frame {
+                Frame {
                     inner_margin: Margin::same(1.0),
                     outer_margin: Margin::same(0.0),
                     fill: ctx.style().visuals.panel_fill,
@@ -411,7 +411,7 @@ impl App for ScreenshotStr {
                             Some(DrawingMode::Highlight) => {
                                 match self.draw_highlight(ctx, available, self.tool_size, self.tool_color)  {
                                     true=>{
-                                        ctx.set_cursor_icon(egui::CursorIcon::VerticalText);
+                                        ctx.set_cursor_icon(CursorIcon::VerticalText);
                                     },
                                     false=>{
                                         ctx.set_cursor_icon(CursorIcon::Default);

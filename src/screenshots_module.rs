@@ -321,7 +321,7 @@ pub mod screenshot_module{
                 draw_text_mut(&mut self.screenshot,
                     Rgba::from(color_rgba),
                     x as i32,
-                    y as i32 + dy as i32,
+                    y as i32 + dy,
                     scale,
                     &font,
                     line
