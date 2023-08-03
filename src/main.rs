@@ -326,6 +326,46 @@ impl ScreenshotStr {
         });
     }
 
+    fn draw_circle(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) {
+        ctx.input(|is| {
+            let pos = is.pointer.interact_pos();
+            if let Some(pos) = pos {
+                let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
+                if let Some(texture_coordinates) = texture_coordinates {
+                    let x = texture_coordinates.x;
+                    let y = texture_coordinates.y;
+                    if is.pointer.any_down() {
+                        if self.starting_point.is_none() {
+                            self.starting_point = Some((x, y));
+                        } else {
+                            let start = (
+                                self.starting_point.unwrap().0,
+                                self.starting_point.unwrap().1,
+                            );
+                            let end = (x, y);
+                            self.screenshot.circle(start, end, size, color);
+                            self.conversion();
+                        }
+                    } else {
+                        if self.starting_point.is_some() {
+                            let start = (
+                                self.starting_point.unwrap().0,
+                                self.starting_point.unwrap().1,
+                            );
+                            let end = (x, y);
+                            self.screenshot.circle(start, end, size, color);
+                            self.conversion();
+                        }
+                        self.starting_point = None;
+                        self.screenshot.save_intermediate_image().unwrap();
+                    }
+                } else {
+                    self.starting_point = None;
+                }
+            }
+        });
+    }
+
     fn conversion(&mut self) {
         if Instant::now() > self.instant {
             self._convert_image();
@@ -690,8 +730,17 @@ impl App for ScreenshotStr {
                                 }
                             }
                             Some(DrawingMode::Shape) => {
-                                self.draw_rectangle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255])
-                            }
+                                match self.shape {
+                                    Some(Shape::Rectangle) => {
+                                        self.draw_rectangle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255])
+                                        
+                                    },
+                                    Some(Shape::Circle) => {
+                                        self.draw_circle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255])
+                                    },
+                                    _ => {}
+                                }
+                           }
                             _ => {}
                         }
                     }

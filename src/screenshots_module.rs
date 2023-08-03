@@ -9,7 +9,7 @@ pub mod screenshot_module{
     use chrono::Local;
     use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
     use image::DynamicImage::ImageRgb8;
-    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect, draw_hollow_rect_mut, draw_text_mut};
+    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect, draw_hollow_rect_mut, draw_text_mut, draw_hollow_circle_mut};
     use imageproc::rect::Rect;
     use screenshots::Screen;
     use thiserror::Error;
@@ -267,6 +267,42 @@ pub mod screenshot_module{
                     draw_hollow_rect_mut(&mut self.screenshot, rect, color_rgba);
                 }
             }
+        }
+
+        pub fn circle(&mut self, center: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
+            let width = self.screenshot.width() as i32;
+            let height = self.screenshot.height() as i32;
+            let (x0, y0) = (center.0 as i32, center.1 as i32);
+            let (xf, yf) = (ending_point.0 as i32, ending_point.1 as i32);
+            let radius = f32::sqrt((ending_point.0 - center.0).powf(2.0) + (ending_point.1 - center.1).powf(2.0)) as i32;
+            let color_rgba = Rgba(color);
+            let half_size = (size / 2.0) as i32;
+
+            self.screenshot = self.intermediate_image.clone();
+
+            for dr in -half_size..=half_size {
+                let r = radius + dr;
+                if (x0, y0) > (0, 0) && (x0, y0) < (width, height) {
+                    println!("center: {:?}, ending_point: {:?}, radius: {:?}, r: {}", (x0,y0), ending_point, radius, r);
+                    draw_hollow_circle_mut(&mut self.screenshot, (x0, y0), r, color_rgba);
+                    // Circle
+                    /*
+                    for i in (x0 - r)..=(x0 + r) {
+                        for j in (y0 - r)..=(y0 + r) {
+                            if ((x0-i)*(x0-i) + (y0-j)*(y0-j)) == r*r {
+                                if i >= 0 && i < width && j >= 0 && j < height {
+                                    let color_pixel = Rgba(color);
+                                    self.screenshot.put_pixel(i as u32, j as u32, color_rgba);
+                                }
+                            }
+                        }
+                    }
+                    */
+                }
+            }
+
+
+
         }
 
 
