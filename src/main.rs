@@ -3,16 +3,16 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Key, Context, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::{path::PathBuf, thread};
 use std::time::{Duration, Instant};
 use eframe::egui::{Color32, Frame, Margin, Slider};
-use eframe::epaint::{Stroke};
+use eframe::epaint::Stroke;
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{EncodableLayout, ImageFormat, GenericImageView};
+use image::{EncodableLayout, ImageFormat};
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
@@ -124,7 +124,7 @@ impl Default for ScreenshotStr {
             text_edit_dialog: false,
             text_edit_dialog_position: Pos2::new(0.0,0.0),
             text: String::new(),
-            shape:None,
+            shape:Some(Shape::Rectangle),
             tool_color:[255,0,0],
             tool_size:10.0,
             settings_dialog:false,

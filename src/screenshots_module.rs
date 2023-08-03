@@ -1,6 +1,5 @@
 pub mod screenshot_module{
     use std::borrow::Cow;
-    use std::cmp::Ordering;
     use std::error::Error;
     use std::path::PathBuf;
     use std::{cmp, thread};
@@ -8,13 +7,11 @@ pub mod screenshot_module{
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
     use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
-    use image::DynamicImage::ImageRgb8;
-    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect, draw_hollow_rect_mut, draw_text_mut, draw_hollow_circle_mut};
+    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect_mut, draw_text_mut, draw_hollow_circle_mut};
     use imageproc::rect::Rect;
     use screenshots::Screen;
     use thiserror::Error;
     use rusttype::{Scale, Font};
-    use crate::egui::Color32;
 
     #[derive(Error,Debug)]
     enum ScreenShotError{
@@ -142,7 +139,7 @@ pub mod screenshot_module{
             Rgba([r, g, b, a])
         }
 
-        pub fn draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8;4]) {
+        pub fn _draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8;4]) {
             let width = self.screenshot.width() as i32;
             let height = self.screenshot.height() as i32;
             let x = x as i32;
@@ -260,8 +257,8 @@ pub mod screenshot_module{
                 if start.0 > 0 && start.0 < width && start.1 > 0 && start.1 < height && b.abs() > 0 && h.abs() > 0 {
                     let x0 = cmp::min(start.0, end.0);
                     let y0 = cmp::min(start.1, end.1);
-                    let x1 = cmp::max(start.0, end.0);
-                    let y1 = cmp::max(start.1, end.1);
+                    let _x1 = cmp::max(start.0, end.0);
+                    let _y1 = cmp::max(start.1, end.1);
 
                     let rect = Rect::at(x0, y0).of_size(b.abs() as u32, h.abs() as u32);
                     draw_hollow_rect_mut(&mut self.screenshot, rect, color_rgba);
@@ -273,7 +270,7 @@ pub mod screenshot_module{
             let width = self.screenshot.width() as i32;
             let height = self.screenshot.height() as i32;
             let (x0, y0) = (center.0 as i32, center.1 as i32);
-            let (xf, yf) = (ending_point.0 as i32, ending_point.1 as i32);
+            let (_xf, _yf) = (ending_point.0 as i32, ending_point.1 as i32);
             let radius = f32::sqrt((ending_point.0 - center.0).powf(2.0) + (ending_point.1 - center.1).powf(2.0)) as i32;
             let color_rgba = Rgba(color);
             let half_size = (size / 2.0) as i32;
