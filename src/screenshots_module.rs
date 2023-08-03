@@ -95,11 +95,13 @@ pub mod screenshot_module{
             Ok(self.screenshot.clone())
         }
 
-        pub fn resize_image(&mut self, x:u32, y:u32, height: u32, width: u32) -> Result<(),Box<dyn Error>>{
-            if self.screenshot.width()<(x+width)||self.screenshot.height()<(y+height) {
+        pub fn resize_image(&mut self, x:u32, y:u32, height: i32, width: i32) -> Result<(),Box<dyn Error>>{
+            if height<0 || width<0 || self.screenshot.width()<(x+width as u32)||self.screenshot.height()<(y+height as u32) {
                 return Err(Box::new(ScreenShotError::ResizeSize));
             }
-            self.screenshot=self.screenshot.crop(x,y,width,height);
+            self.screenshot=self.screenshot.crop(x,y,width as u32,height as u32);
+            self.intermediate_image=self.screenshot.clone();
+            self.original_image=self.original_image.crop(x,y,width as u32,height as u32);
             Ok(())
         }
         pub fn get_width(&self)->Result<u32,Box<dyn Error>>{
@@ -112,10 +114,12 @@ pub mod screenshot_module{
 
         pub fn rotate_sx_90(&mut self)->Result<(),Box<dyn Error>>{
             self.screenshot=self.screenshot.rotate90();
+            self.original_image=self.original_image.rotate90();
             Ok(())
         }
         pub fn rotate_dx_90(&mut self)->Result<(),Box<dyn Error>>{
             self.screenshot=self.screenshot.rotate270();
+            self.original_image=self.original_image.rotate270();
             Ok(())
         }
 

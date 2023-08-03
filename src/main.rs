@@ -6,7 +6,7 @@ mod settings_module;
 use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Key, Context, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
-use std::{path::PathBuf, thread};
+use std::{cmp, path::PathBuf, thread};
 use std::time::{Duration, Instant};
 use eframe::egui::{Color32, Frame, Margin, Slider};
 use eframe::epaint::Stroke;
@@ -76,7 +76,8 @@ enum DrawingMode {
     Erase,
     Shape,
     Text,
-    Pause
+    Pause,
+    Crop
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -138,6 +139,7 @@ impl Default for ScreenshotStr {
 }
 
 impl ScreenshotStr {
+    //front
     pub fn toggle_drawing_mode(&mut self, mode: DrawingMode) {
         if self.drawing_mode == Some(mode) {
             self.drawing_mode = None;
@@ -286,8 +288,8 @@ impl ScreenshotStr {
         })
     }
 
-    fn draw_rectangle(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) {
-        ctx.input(|is| {
+    fn draw_rectangle(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) -> Option<((f32,f32),(f32,f32))> {
+        return ctx.input(|is| {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
                 let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
@@ -305,6 +307,7 @@ impl ScreenshotStr {
                             let end = (x, y);
                             self.screenshot.rectangle(start, end, size, color);
                             self.conversion();
+                            return Option::None;
                         }
                     } else {
                         if self.starting_point.is_some() {
@@ -315,14 +318,17 @@ impl ScreenshotStr {
                             let end = (x, y);
                             self.screenshot.rectangle(start, end, size, color);
                             self.conversion();
+                            let tmp=self.starting_point.take().unwrap();
+                            self.screenshot.save_intermediate_image().unwrap();
+                            return Option::Some((tmp,(x,y)));
                         }
-                        self.starting_point = None;
-                        self.screenshot.save_intermediate_image().unwrap();
+                        return None;
                     }
                 } else {
                     self.starting_point = None;
                 }
             }
+            return Option::None;
         });
     }
 
@@ -365,7 +371,6 @@ impl ScreenshotStr {
             }
         });
     }
-
     fn conversion(&mut self) {
         if Instant::now() > self.instant {
             self._convert_image();
@@ -595,19 +600,21 @@ impl App for ScreenshotStr {
                         // rotate left
                         if ui.button("\u{27F3}").clicked() {
                             self.screenshot.rotate_sx_90().unwrap();
+                            self._convert_image();
                             self.show_image=true;
                         }
 
                         // rotate right
                         if ui.button("\u{27F2}").clicked() {
                             self.screenshot.rotate_dx_90().unwrap();
+                            self._convert_image();
                             self.show_image=true;
                         }
 
                         // crop
                         if ui.button("\u{2702}").clicked() {
-                            self.screenshot.resize_image(190, 200, 300,  200).unwrap();
-                            self.show_image=true;
+                            self.toggle_drawing_mode(DrawingMode::Crop);
+                            self.screenshot.save_intermediate_image().unwrap();
                         }
 
                         // draw
@@ -640,45 +647,54 @@ impl App for ScreenshotStr {
                             // Color Picker, Size Picker for Brush, Highlight, Erase, Shapes, Text
                             ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
                                 //SIZE FOR ALL
-                                let picker = ui.color_edit_button_srgb(&mut self.tool_color).clone();
-                                match self.drawing_mode {
-                                    Some(DrawingMode::Paint) => {
-                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                        if picker.clicked() {
-                                            self.previous_drawing_mode=Some(DrawingMode::Paint);
-                                            self.drawing_mode=Some(DrawingMode::Pause);
+                                if self.drawing_mode!=Some(DrawingMode::Crop) && self.drawing_mode!= Some(DrawingMode::Erase) {
+                                    //with color picker
+                                    let picker = ui.color_edit_button_srgb(&mut self.tool_color).clone();
+                                    match self.drawing_mode {
+                                        Some(DrawingMode::Paint) => {
+                                            ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                            if picker.clicked() {
+                                                self.previous_drawing_mode=Some(DrawingMode::Paint);
+                                                self.drawing_mode=Some(DrawingMode::Pause);
+                                            }
+                                        },
+                                        Some(DrawingMode::Highlight) => {
+                                            ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                            if picker.clicked() {
+                                                self.previous_drawing_mode=Some(DrawingMode::Highlight);
+                                                self.drawing_mode=Some(DrawingMode::Pause);
+                                            }
+                                        },
+                                        Some(DrawingMode::Shape) => {
+                                            ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                            if ui.button("\u{25AD}").clicked() { self.shape=Some(Shape::Rectangle); }
+                                            if ui.button("\u{2B55}").clicked() { self.shape=Some(Shape::Circle); }
+                                        },
+                                        Some(DrawingMode::Text) => {
+                                            ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                            ui.color_edit_button_srgb(&mut self.tool_color);
+                                        },
+                                        Some(DrawingMode::Pause) => {
+                                            if picker.clicked_elsewhere() {
+                                                println!("before dm: {:?}", self.drawing_mode);
+                                                self.drawing_mode=self.previous_drawing_mode.clone();
+                                                println!("after Drawing Mode: {:?}", self.drawing_mode);
+                                            }
                                         }
-                                    },
-                                    Some(DrawingMode::Highlight) => {
-                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                        if picker.clicked() {
-                                            self.previous_drawing_mode=Some(DrawingMode::Highlight);
-                                            self.drawing_mode=Some(DrawingMode::Pause);
-                                        }
-                                    },
-                                    Some(DrawingMode::Erase) => {
-                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                    },
-                                    Some(DrawingMode::Shape) => {
-                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                        if ui.button("\u{25AD}").clicked() { self.shape=Some(Shape::Rectangle); }
-                                        if ui.button("\u{2B55}").clicked() { self.shape=Some(Shape::Circle); }                                        
-                                    },
-                                    Some(DrawingMode::Text) => {
-                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                        ui.color_edit_button_srgb(&mut self.tool_color);
-                                    },
-                                    Some(DrawingMode::Pause) => {
-                                        if picker.clicked_elsewhere() {
-                                            println!("before dm: {:?}", self.drawing_mode);
-                                            self.drawing_mode=self.previous_drawing_mode.clone();
-                                            println!("after Drawing Mode: {:?}", self.drawing_mode);
-                                        }
-                                    },
-                                    _ => {}
-                                }
-                                
+                                        _ => {}
+                                    }
+                                }else{
+                                    //without color picker
+                                    match self.drawing_mode {
+                                        Some(DrawingMode::Erase) => {
+                                            ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                        },
+                                        Some(DrawingMode::Crop)=>{
 
+                                        },
+                                        _=>{}
+                                    }
+                                }
                             });
                                 
                         }
@@ -732,15 +748,25 @@ impl App for ScreenshotStr {
                             Some(DrawingMode::Shape) => {
                                 match self.shape {
                                     Some(Shape::Rectangle) => {
-                                        self.draw_rectangle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255])
+                                        self.draw_rectangle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255]);
                                         
                                     },
                                     Some(Shape::Circle) => {
-                                        self.draw_circle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255])
+                                        self.draw_circle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255]);
                                     },
                                     _ => {}
                                 }
                            }
+                            Some(DrawingMode::Crop)=>{
+                                let coordinates=self.draw_rectangle(ctx,available,2.0,[255,255,255,255]);
+                                if coordinates.is_some(){
+                                    let coordinates=coordinates.unwrap();
+                                    let min_x=cmp::min(coordinates.0.0 as u32,coordinates.1.0 as u32);
+                                    let min_y=cmp::min(coordinates.0.1 as u32,coordinates.1.1 as u32);
+                                    self.screenshot.resize_image(min_x+2, min_y+2, (coordinates.0.1 - coordinates.1.1).abs() as i32 -4, (coordinates.0.0 - coordinates.1.0).abs() as i32 -4).unwrap();
+                                    self._convert_image();
+                                }
+                            }
                             _ => {}
                         }
                     }
