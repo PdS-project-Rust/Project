@@ -189,9 +189,9 @@ pub mod screenshot_module{
             }
         }
 
-        pub fn highlight_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32) {
+        pub fn highlight_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 3]) {
             // yellow color with transparency
-            let highlight_color = Rgba([255, 255, 0, 64]);
+            let highlight_color = Rgba([color[0], color[1], color[2], 64]);
             // create a temporary overlay image with the same size as the screenshot
             let mut overlay_image = RgbaImage::new(self.screenshot.width(), self.screenshot.height());
             // draw the highlighted stripes on the overlay image

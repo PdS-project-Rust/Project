@@ -75,13 +75,13 @@ enum DrawingMode {
     Highlight,
     Erase,
     Shape,
+    Text
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Shapes {
+enum Shape {
     Rectangle,
-    Circle,
-    //Arrow,
+    Circle
 }
 
 struct ScreenshotStr {
@@ -93,21 +93,16 @@ struct ScreenshotStr {
     show_image:bool,
     save_dialog:bool,
     drawing_mode:Option<DrawingMode>,
-    text_mode: bool,
-    text_color: [u8;3],
-    text_size: f32,
     text_edit_dialog: bool,
     text_edit_dialog_position: Pos2,
     text: String,
-    shape:Option<Shapes>,
+    shape:Option<Shape>,
+    tool_color:[u8;3],
+    tool_size:f32,
     settings_dialog:bool,
     settings:Settings,
     instant:Instant,
     starting_point:Option<(f32, f32)>,
-    brush_color:[u8;3],
-    brush_size:f32,
-    highlighter_size:f32,
-    eraser_size:f32,
     upper_panel_size:Vec2,
     test:bool,
 }
@@ -123,21 +118,16 @@ impl Default for ScreenshotStr {
             show_image:false,
             save_dialog:false,
             drawing_mode:None,
-            text_mode: false,
-            text_color: [255, 0, 0],
-            text_size: 16.0,
             text_edit_dialog: false,
             text_edit_dialog_position: Pos2::new(0.0,0.0),
             text: String::new(),
             shape:None,
+            tool_color:[255,0,0],
+            tool_size:10.0,
             settings_dialog:false,
             settings:Settings::default(),
             instant:Instant::now(),
             starting_point:None,
-            brush_color: [255, 0, 0],
-            brush_size: 6.0,
-            highlighter_size: 18.0,
-            eraser_size: 16.0,
             upper_panel_size:Vec2::new(0.0,0.0),
             test:false,
          }
@@ -231,7 +221,7 @@ impl ScreenshotStr {
         })
     }
 
-    fn draw_highlight(&mut self, ctx: &egui::Context,available: Vec2, size: f32) -> bool {
+    fn draw_highlight(&mut self, ctx: &egui::Context,available: Vec2, size: f32, color: [u8;3]) -> bool {
         ctx.input(|is| -> bool {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
@@ -250,6 +240,7 @@ impl ScreenshotStr {
                                 self.starting_point.unwrap(),
                                 (x, y),
                                 size,
+                                color
                             );
                             let mut dx = 1.0;
                             if self.starting_point.unwrap().0 > x { dx = -1.0 }
@@ -433,8 +424,8 @@ impl App for ScreenshotStr {
                 .show(ctx, |ui| {
                     ui.add(
                         TextEdit::multiline(&mut self.text)
-                        .font(egui::FontId::proportional(self.text_size))
-                        .text_color(Color32::from_rgb(self.text_color[0], self.text_color[1], self.text_color[2]))
+                        .font(egui::FontId::proportional(self.tool_size))
+                        .text_color(Color32::from_rgb(self.tool_color[0], self.tool_color[1], self.tool_color[2]))
                         .frame(false)
                     );
 
@@ -447,7 +438,7 @@ impl App for ScreenshotStr {
                     } else if enter_pressed {
                         self.text_edit_dialog=false;
                         let textbox_pos = self.text_edit_dialog_position;
-                        self.screenshot.draw_text(&self.text, textbox_pos.x, textbox_pos.y, self.text_color, self.text_size);
+                        self.screenshot.draw_text(&self.text, textbox_pos.x, textbox_pos.y, self.tool_color, self.tool_size);
                         self._convert_image();
 
                     }
@@ -455,6 +446,7 @@ impl App for ScreenshotStr {
                 });
 
         }
+        
         // header of the app
         TopBottomPanel::top("header").frame(
             egui::Frame {
@@ -462,39 +454,37 @@ impl App for ScreenshotStr {
                 outer_margin: Margin::same(0.0),
                 fill: ctx.style().visuals.panel_fill,
                 ..Default::default()
-            }
-        )
-            .show(ctx, |ui| {
-            let timer = self.timer;
-            let screen = self.screen;
+            }).show(ctx, |ui| {
+                let timer = self.timer;
+                let screen = self.screen;
 
-            let timer_str = format!("{} Seconds", timer);
-            let screen_str = format!("Screen {}", screen);
-            self.upper_panel_size=ui.available_size();
-            if self.test {
-                let duration = Duration::from_secs(self.timer as u64);
-                if frame.info().window_info.focused {
-                    println!("now minimized");
-                    self.screenshot=api_mod::take_screenshot(duration,self.screen);
-                    self._convert_image();
-                    self.show_image=true;
-                    frame.set_minimized(false);
-                    self.test=false;
-                
-                } else {
-                    println!("not minimized");
-                    thread::sleep(Duration::from_millis(10));
-                }
-            }
-
-
-            ui.horizontal(|ui| {
-                if ui.button("New Screenshot").clicked() {
-                    frame.set_minimized(true);
-                    self.test = true;
+                let timer_str = format!("{} Seconds", timer);
+                let screen_str = format!("Screen {}", screen);
+                self.upper_panel_size=ui.available_size();
+                if self.test {
+                    let duration = Duration::from_secs(self.timer as u64);
+                    if frame.info().window_info.focused {
+                        println!("now minimized");
+                        self.screenshot=api_mod::take_screenshot(duration,self.screen);
+                        self._convert_image();
+                        self.show_image=true;
+                        frame.set_minimized(false);
+                        self.test=false;
+                    
+                    } else {
+                        println!("not minimized");
+                        thread::sleep(Duration::from_millis(10));
+                    }
                 }
 
-                ui.separator();
+
+                ui.horizontal(|ui| {
+                    if ui.button("New Screenshot").clicked() {
+                        frame.set_minimized(true);
+                        self.test = true;
+                    }
+
+                    ui.separator();
 
                 // combo box timer for the screenshot
                 ComboBox::from_label("Timer")
@@ -581,12 +571,6 @@ impl App for ScreenshotStr {
                         if ui.button("\u{270F}").clicked() {
                             self.toggle_drawing_mode(DrawingMode::Paint);
                         }
-                        if self.drawing_mode == Some(DrawingMode::Paint){
-                            //color picker
-                            ui.color_edit_button_srgb(&mut self.brush_color);
-                            //brush size
-                            ui.add(Slider::new(&mut self.brush_size, 1.0..=35.0).text("Size"));
-                        }
 
                         // highlight
                         if ui.button("\u{1F526}").clicked() {
@@ -603,42 +587,51 @@ impl App for ScreenshotStr {
                             self.toggle_drawing_mode(DrawingMode::Shape);
                             self.screenshot.save_intermediate_image().unwrap();
                         }
-                        if self.drawing_mode == Some(DrawingMode::Shape) {
-                            //chose shape
-                            ComboBox::from_label("Shape")
-                                .selected_text("Shape")
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(&mut self.shape, Some(Shapes::Rectangle), "Rectangle");
-                                    ui.selectable_value(&mut self.shape, Some(Shapes::Circle), "Circle");
-                                });
-                        }
 
                         // text
                         if ui.button("\u{1F1F9}").clicked() {
-                            self.text_mode = !self.text_mode;
-                        }
-                        if self.text_mode {
-                            //chose size with drag value
-                            ui.add(DragValue::new(&mut self.text_size).speed(1.0).clamp_range(1.0..=100.0));
-
-                            //chose color
-                            ui.color_edit_button_srgb(&mut self.text_color);
+                            self.toggle_drawing_mode(DrawingMode::Text);
                         }
 
-                        // undo
-                        if ui.button("\u{21A9}").clicked() {
-
+                        if self.drawing_mode.is_some() {
+                            // Color Picker, Size Picker for Brush, Highlight, Erase, Shapes, Text
+                            ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
+                                //SIZE FOR ALL
+                                match self.drawing_mode {
+                                    Some(DrawingMode::Paint) => {
+                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                        ui.color_edit_button_srgb(&mut self.tool_color);
+                                    },
+                                    Some(DrawingMode::Highlight) => {
+                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                        ui.color_edit_button_srgb(&mut self.tool_color);
+                                    },
+                                    Some(DrawingMode::Erase) => {
+                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                    },
+                                    Some(DrawingMode::Shape) => {
+                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                        ui.color_edit_button_srgb(&mut self.tool_color);
+                                        if ui.button("\u{25AD}").clicked() { self.shape=Some(Shape::Rectangle); }
+                                        if ui.button("\u{2B55}").clicked() { self.shape=Some(Shape::Circle); }                                        
+                                    },
+                                    Some(DrawingMode::Text) => {
+                                        ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                        ui.color_edit_button_srgb(&mut self.tool_color);
+                                    },
+                                    None => {}
+                                }
+                            });
+                                
                         }
 
-                        // redo
-                        if ui.button("\u{21AA}").clicked() {
 
-                        }
                     });
 
                 }
             });
-        CentralPanel::default()
+
+            CentralPanel::default()
             .frame(Frame::none())
             .show(ctx, |ui| {
             ui.with_layout(Layout::centered_and_justified(Direction::TopDown), |ui| {
@@ -649,7 +642,7 @@ impl App for ScreenshotStr {
                         // drawing
                         match self.drawing_mode {
                             Some(DrawingMode::Paint) => {
-                                match self.draw_paint(ctx, available, self.brush_size, [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255]){
+                                match self.draw_paint(ctx, available, self.tool_size, [self.tool_color[0], self.tool_color[1], self.tool_color[2], 255]){
                                     true=>{
                                         ctx.set_cursor_icon(CursorIcon::Crosshair);
                                     },
@@ -659,7 +652,7 @@ impl App for ScreenshotStr {
                                 }
                             }
                             Some(DrawingMode::Highlight) => {
-                                match self.draw_highlight(ctx, available, self.highlighter_size)  {
+                                match self.draw_highlight(ctx, available, self.tool_size, self.tool_color)  {
                                     true=>{
                                         ctx.set_cursor_icon(egui::CursorIcon::VerticalText);
                                     },
@@ -669,7 +662,7 @@ impl App for ScreenshotStr {
                                 }
                             }
                             Some(DrawingMode::Erase) => {
-                                match self.erase(ctx, available, self.eraser_size) {
+                                match self.erase(ctx, available, self.tool_size) {
                                     true=>{
                                         ctx.set_cursor_icon(CursorIcon::NotAllowed);
                                     },
@@ -679,22 +672,10 @@ impl App for ScreenshotStr {
                                 }
                             }
                             Some(DrawingMode::Shape) => {
-                                self.draw_rectangle(ctx, available, self.brush_size, [self.brush_color[0],self.brush_color[1],self.brush_color[2], 255])
+                                self.draw_rectangle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255])
                             }
                             _ => {}
                         }
-                    }
-
-                    // if text mode is active and if image is clicked open text dialog
-                    if self.text_mode && self.show_image {
-                        ctx.input(|ui| {
-                            if ui.pointer.any_down() && !self.text_edit_dialog {
-                                self.text_edit_dialog = true;
-                                self.text_edit_dialog_position = ui.pointer.interact_pos().unwrap();
-                                println!("text edit dialog opened");
-                                println!("text edit dialog position: {:?}", self.text_edit_dialog_position);
-                            }
-                        });
                     }
                 });
             });
