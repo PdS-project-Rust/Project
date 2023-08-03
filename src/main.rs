@@ -75,7 +75,8 @@ enum DrawingMode {
     Highlight,
     Erase,
     Shape,
-    Text
+    Text,
+    Pause
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -93,6 +94,7 @@ struct ScreenshotStr {
     show_image:bool,
     save_dialog:bool,
     drawing_mode:Option<DrawingMode>,
+    previous_drawing_mode:Option<DrawingMode>,
     text_edit_dialog: bool,
     text_edit_dialog_position: Pos2,
     text: String,
@@ -118,6 +120,7 @@ impl Default for ScreenshotStr {
             show_image:false,
             save_dialog:false,
             drawing_mode:None,
+            previous_drawing_mode:Some(DrawingMode::Pause),
             text_edit_dialog: false,
             text_edit_dialog_position: Pos2::new(0.0,0.0),
             text: String::new(),
@@ -189,13 +192,13 @@ impl ScreenshotStr {
         ctx.input(|is| -> bool {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
-                println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
+                // println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
                 let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
                 if texture_coordinates.is_some() {
                     let texture_coordinates=texture_coordinates.unwrap();
                     let x = texture_coordinates.x;
                     let y = texture_coordinates.y;
-                    println!("coordinates from function: x {}, y {}",x,y);
+                    // println!("coordinates from function: x {}, y {}",x,y);
                     if is.pointer.any_down() {
                         if self.starting_point.is_none() {
                             self.starting_point = Some((x, y));
@@ -464,7 +467,7 @@ impl App for ScreenshotStr {
                 if self.test {
                     let duration = Duration::from_secs(self.timer as u64);
                     if frame.info().window_info.focused {
-                        println!("now minimized");
+                        // println!("now minimized");
                         self.screenshot=api_mod::take_screenshot(duration,self.screen);
                         self._convert_image();
                         self.show_image=true;
@@ -472,7 +475,7 @@ impl App for ScreenshotStr {
                         self.test=false;
                     
                     } else {
-                        println!("not minimized");
+                        // println!("not minimized");
                         thread::sleep(Duration::from_millis(10));
                     }
                 }
@@ -597,21 +600,27 @@ impl App for ScreenshotStr {
                             // Color Picker, Size Picker for Brush, Highlight, Erase, Shapes, Text
                             ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
                                 //SIZE FOR ALL
+                                let picker = ui.color_edit_button_srgb(&mut self.tool_color).clone();
                                 match self.drawing_mode {
                                     Some(DrawingMode::Paint) => {
                                         ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                        ui.color_edit_button_srgb(&mut self.tool_color);
+                                        if picker.clicked() {
+                                            self.previous_drawing_mode=Some(DrawingMode::Paint);
+                                            self.drawing_mode=Some(DrawingMode::Pause);
+                                        }
                                     },
                                     Some(DrawingMode::Highlight) => {
                                         ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                        ui.color_edit_button_srgb(&mut self.tool_color);
+                                        if picker.clicked() {
+                                            self.previous_drawing_mode=Some(DrawingMode::Highlight);
+                                            self.drawing_mode=Some(DrawingMode::Pause);
+                                        }
                                     },
                                     Some(DrawingMode::Erase) => {
                                         ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                     },
                                     Some(DrawingMode::Shape) => {
                                         ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                        ui.color_edit_button_srgb(&mut self.tool_color);
                                         if ui.button("\u{25AD}").clicked() { self.shape=Some(Shape::Rectangle); }
                                         if ui.button("\u{2B55}").clicked() { self.shape=Some(Shape::Circle); }                                        
                                     },
@@ -619,8 +628,17 @@ impl App for ScreenshotStr {
                                         ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                         ui.color_edit_button_srgb(&mut self.tool_color);
                                     },
-                                    None => {}
+                                    Some(DrawingMode::Pause) => {
+                                        if picker.clicked_elsewhere() {
+                                            println!("before dm: {:?}", self.drawing_mode);
+                                            self.drawing_mode=self.previous_drawing_mode.clone();
+                                            println!("after Drawing Mode: {:?}", self.drawing_mode);
+                                        }
+                                    },
+                                    _ => {}
                                 }
+                                
+
                             });
                                 
                         }
