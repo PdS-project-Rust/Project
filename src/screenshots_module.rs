@@ -1,16 +1,20 @@
 pub mod screenshot_module{
     use std::borrow::Cow;
+    use std::cmp::Ordering;
     use std::error::Error;
     use std::path::PathBuf;
-    use std::thread;
+    use std::{cmp, thread};
     use std::time::Duration;
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
     use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
-    use imageproc::drawing::{draw_line_segment_mut, draw_text_mut};
+    use image::DynamicImage::ImageRgb8;
+    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect, draw_hollow_rect_mut, draw_text_mut};
+    use imageproc::rect::Rect;
     use screenshots::Screen;
     use thiserror::Error;
     use rusttype::{Scale, Font};
+    use crate::egui::Color32;
 
     #[derive(Error,Debug)]
     enum ScreenShotError{
@@ -25,6 +29,7 @@ pub mod screenshot_module{
     pub struct Screenshot {
         screenshot: DynamicImage,
         original_image: DynamicImage,
+        intermediate_image: DynamicImage,
     }
 
     impl Screenshot {
@@ -32,6 +37,7 @@ pub mod screenshot_module{
             Screenshot{
                 screenshot: DynamicImage::new_rgba8(0,0),
                 original_image: DynamicImage::new_rgba8(0,0),
+                intermediate_image: DynamicImage::new_rgba8(0,0),
             }
         }
 
@@ -39,14 +45,16 @@ pub mod screenshot_module{
             let image_captured=screen.capture()?;
             let width= image_captured.width();
             let height= image_captured.height();
-            let image_rgba=image_captured.rgba().to_owned();
-            let rgba_image=RgbaImage::from_raw(width,height,image_rgba).unwrap();
-            let image_obj=DynamicImage::from(rgba_image);
+            let image_rgba= image_captured.rgba().to_owned();
+            let rgba_image= RgbaImage::from_raw(width,height,image_rgba).unwrap();
+            let image_obj= DynamicImage::from(rgba_image);
             let original_obj=image_obj.clone();
+            let intermediate_obj = image_obj.clone();
             Ok(
                 Screenshot{
                     screenshot: image_obj,
                     original_image: original_obj,
+                    intermediate_image: intermediate_obj,
                 }
             )
         }
@@ -117,6 +125,21 @@ pub mod screenshot_module{
         pub fn screenshot_after_delay(duration:Duration, screen:Screen) -> Result<Screenshot, Box<dyn Error>> {
             thread::sleep(duration);
             Screenshot::new(screen)
+        }
+
+        pub fn save_intermediate_image(&mut self) -> Result<(), Box<dyn Error>> {
+            self.intermediate_image = self.screenshot.clone();
+            Ok(())
+        }
+
+        pub fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
+            let alpha = foreground[3] as f32 / 255.0;
+            let inv_alpha = 1.0 - alpha;
+            let r = (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
+            let g = (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
+            let b = (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
+            let a = background[3];
+            Rgba([r, g, b, a])
         }
 
         pub fn draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8;4]) {
@@ -216,16 +239,36 @@ pub mod screenshot_module{
             }
         }
 
+        pub fn rectangle(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
+            let width = self.screenshot.width() as i32;
+            let height = self.screenshot.height() as i32;
+            let start = (starting_point.0 as i32, starting_point.1 as i32);
+            let end = (ending_point.0 as i32, ending_point.1 as i32);
+            let color_rgba = Rgba(color);
+            let half_size = (size / 2.0) as i32;
 
-        fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
-            let alpha = foreground[3] as f32 / 255.0;
-            let inv_alpha = 1.0 - alpha;
-            let r = (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
-            let g = (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
-            let b = (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
-            let a = background[3];
-            Rgba([r, g, b, a])
+            self.screenshot = self.intermediate_image.clone();
+
+            for dx in -half_size..=half_size {
+                let mut dy = dx;
+                if (start.0 > end.0) ^ (start.1 > end.1) {dy = -dx} // XOR
+                let start = (start.0 - dx, start.1 - dy);
+                let end = (end.0 + dx, end.1 + dy);
+                let b = end.0 - start.0;
+                let h = end.1 - start.1;
+
+                if start.0 > 0 && start.0 < width && start.1 > 0 && start.1 < height && b.abs() > 0 && h.abs() > 0 {
+                    let x0 = cmp::min(start.0, end.0);
+                    let y0 = cmp::min(start.1, end.1);
+                    let x1 = cmp::max(start.0, end.0);
+                    let y1 = cmp::max(start.1, end.1);
+
+                    let rect = Rect::at(x0, y0).of_size(b.abs() as u32, h.abs() as u32);
+                    draw_hollow_rect_mut(&mut self.screenshot, rect, color_rgba);
+                }
+            }
         }
+
 
         pub fn draw_text(&mut self, text: &String, x: f32, y: f32, color: [u8; 3], font_size: f32) {
             // Load a font.

@@ -3,16 +3,16 @@ mod hotkey_module;
 mod api_module;
 mod settings_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Rect, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, DragValue, Key, Context, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
 use crate::api_module::api_module as api_mod;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::{path::PathBuf, thread};
 use std::time::{Duration, Instant};
 use eframe::egui::{Color32, Frame, Margin, Slider};
-use eframe::epaint::Stroke;
+use eframe::epaint::{Stroke};
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{EncodableLayout, ImageFormat};
+use image::{EncodableLayout, ImageFormat, GenericImageView};
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
@@ -24,7 +24,7 @@ fn build_gui() -> () {
         ..Default::default()
     };
 
-   
+
     println!("Starting app");
     eframe::run_native(
         "Screen Capture",
@@ -104,10 +104,10 @@ struct ScreenshotStr {
     settings:Settings,
     instant:Instant,
     starting_point:Option<(f32, f32)>,
-    brush_color: [u8;3],
-    brush_size: f32,
-    highlighter_size: f32,
-    eraser_size: f32,
+    brush_color:[u8;3],
+    brush_size:f32,
+    highlighter_size:f32,
+    eraser_size:f32,
     upper_panel_size:Vec2,
     test:bool,
 }
@@ -128,7 +128,7 @@ impl Default for ScreenshotStr {
             text_size: 16.0,
             text_edit_dialog: false,
             text_edit_dialog_position: Pos2::new(0.0,0.0),
-            text: String::new(),        
+            text: String::new(),
             shape:None,
             settings_dialog:false,
             settings:Settings::default(),
@@ -169,20 +169,20 @@ impl ScreenshotStr {
     fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Option<Pos2> {
         let w = self.screenshot.get_width().unwrap() as f32;
         let h = self.screenshot.get_height().unwrap() as f32;
-        println!("size window: {:?}",available);
+        //println!("size window: {:?}",available);
         //x is 640 out of 640, y is 356 out of 400 (-22*2 equal to borders+top and bottom)
         let w_window = available.x;
         let h_window = available.y;
         let height = h_window.min(w_window * h / w);
-        println!("height scaled: {}, other: {}",(w_window * h / w),h_window);
-        println!("height: {}",height);
-        println!("{}",self.upper_panel_size.y);
+        //println!("height scaled: {}, other: {}",(w_window * h / w),h_window);
+        //println!("height: {}",height);
+        //println!("{}",self.upper_panel_size.y);
         let width = height * w / h;
         let h_scale = height / h;
         let w_scale = width / w;
         let image_pos_x = (total_window.x - width) / 2.0;
-        println!("{:?}",Margin::same(1.0).sum());
-        println!("cursor pos: {:?}",cursor_pos);
+        //println!("{:?}",Margin::same(1.0).sum());
+        //println!("cursor pos: {:?}",cursor_pos);
         let image_pos_y = self.upper_panel_size.y + Margin::same(1.0).sum().y +(h_window-height)/2.0;
         let image_cursor_pos = Pos2 {
             x: (cursor_pos.x - image_pos_x)/w_scale,
@@ -217,17 +217,14 @@ impl ScreenshotStr {
                                 size,
                             );
                             self.starting_point = Some((x, y));
-                            if Instant::now() > self.instant {
-                                self._convert_image();
-                                self.instant += Duration::from_millis(16);
-                            }
+                            self.conversion();
                         }
                     } else {
                         self.starting_point = None;
                     }
                     return true;
-                }else{
-                    return false;
+                } else {
+                    self.starting_point = None;
                 }
             }
             return false;
@@ -238,13 +235,13 @@ impl ScreenshotStr {
         ctx.input(|is| -> bool {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
-                println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
+                //println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
                 let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
                 if texture_coordinates.is_some() {
                     let texture_coordinates=texture_coordinates.unwrap();
                     let x = texture_coordinates.x;
                     let y = texture_coordinates.y;
-                    println!("coordinates from function: x {}, y {}",x,y);
+                    //println!("coordinates from function: x {}, y {}",x,y);
                     if is.pointer.any_down() {
                         if self.starting_point.is_none() {
                             self.starting_point = Some((x, y));
@@ -257,22 +254,19 @@ impl ScreenshotStr {
                             let mut dx = 1.0;
                             if self.starting_point.unwrap().0 > x { dx = -1.0 }
                             self.starting_point = Some((x+dx, y));
-                            if Instant::now() > self.instant {
-                                self._convert_image();
-                                self.instant += Duration::from_millis(16);
-                            }
+                            self.conversion();
                         }
                     } else {
                         self.starting_point = None;
                     }
                     return true;
-                }else{
-                    return false;
+                } else {
+                    self.starting_point = None;
                 }
             }else{
                 self.starting_point = None;
-                return false;
             }
+            return false;
         })
     }
 
@@ -288,54 +282,62 @@ impl ScreenshotStr {
 
                     if ui.pointer.any_down() {
                         self.screenshot.erase_point(x, y, size);
-                        if Instant::now() > self.instant {
-                            self._convert_image();
-                            self.instant += Duration::from_millis(16);
-                        }
+                        self.conversion();
                     }
                     return true;
-                }else{
-                    return false;
                 }
             }
+            self.starting_point = None;
             return false;
         })
     }
 
-    pub fn draw_rectangle(&mut self, ctx: &mut Context, available: Vec2, starting_point: (f32, f32), ending_point: (f32, f32), color: Color32, size: f32, corner_radius: f32) {
+    fn draw_rectangle(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) {
         ctx.input(|is| {
             let pos = is.pointer.interact_pos();
             if let Some(pos) = pos {
-                println!("coordinates from Pos2: x {}, y {}",pos.x,pos.y);
-                let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
-                if texture_coordinates.is_some() {
-                    let texture_coordinates=texture_coordinates.unwrap();
+                let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
+                if let Some(texture_coordinates) = texture_coordinates {
                     let x = texture_coordinates.x;
                     let y = texture_coordinates.y;
-                    println!("coordinates from function: x {}, y {}",x,y);
                     if is.pointer.any_down() {
                         if self.starting_point.is_none() {
                             self.starting_point = Some((x, y));
                         } else {
-                            let rect = Rect::from_min_max(
-                                Pos2::new(self.starting_point.unwrap().0,self.starting_point.unwrap().1),
-                                Pos2::new(x, y));
-                            let stroke = Stroke::new(size, color);
-                            ctx.debug_painter().rect_stroke(rect, corner_radius, stroke);
-                            self.starting_point = Some((x, y));
-                            if Instant::now() > self.instant {
-                                self._convert_image();
-                                self.instant += Duration::from_millis(16);
-                            }
+                            let start = (
+                                self.starting_point.unwrap().0,
+                                self.starting_point.unwrap().1,
+                            );
+                            let end = (x, y);
+                            self.screenshot.rectangle(start, end, size, color);
+                            self.conversion();
                         }
                     } else {
+                        if self.starting_point.is_some() {
+                            let start = (
+                                self.starting_point.unwrap().0,
+                                self.starting_point.unwrap().1,
+                            );
+                            let end = (x, y);
+                            self.screenshot.rectangle(start, end, size, color);
+                            self.conversion();
+                        }
                         self.starting_point = None;
+                        self.screenshot.save_intermediate_image().unwrap();
                     }
+                } else {
+                    self.starting_point = None;
                 }
             }
-        })
+        });
     }
 
+    fn conversion(&mut self) {
+        if Instant::now() > self.instant {
+            self._convert_image();
+            self.instant += Duration::from_millis(16);
+        }
+    }
 
 }
 
@@ -436,7 +438,7 @@ impl App for ScreenshotStr {
                         .frame(false)
                     );
 
-                    println!("textedit size: {:?}", ui.available_size());
+                    // println!("textedit size: {:?}", ui.available_size());
                     let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
                     let shift_pressed = ctx.input(|is| is.modifiers.shift);
                     if enter_pressed && shift_pressed  {
@@ -449,9 +451,9 @@ impl App for ScreenshotStr {
                         self._convert_image();
 
                     }
-        
+
                 });
-        
+
         }
         // header of the app
         TopBottomPanel::top("header").frame(
@@ -578,7 +580,7 @@ impl App for ScreenshotStr {
                         // draw
                         if ui.button("\u{270F}").clicked() {
                             self.toggle_drawing_mode(DrawingMode::Paint);
-                        } 
+                        }
                         if self.drawing_mode == Some(DrawingMode::Paint){
                             //color picker
                             ui.color_edit_button_srgb(&mut self.brush_color);
@@ -599,6 +601,7 @@ impl App for ScreenshotStr {
                         // shapes
                         if ui.button("\u{2B55}").clicked() {
                             self.toggle_drawing_mode(DrawingMode::Shape);
+                            self.screenshot.save_intermediate_image().unwrap();
                         }
                         if self.drawing_mode == Some(DrawingMode::Shape) {
                             //chose shape
@@ -617,7 +620,7 @@ impl App for ScreenshotStr {
                         if self.text_mode {
                             //chose size with drag value
                             ui.add(DragValue::new(&mut self.text_size).speed(1.0).clamp_range(1.0..=100.0));
-                            
+
                             //chose color
                             ui.color_edit_button_srgb(&mut self.text_color);
                         }
@@ -646,8 +649,7 @@ impl App for ScreenshotStr {
                         // drawing
                         match self.drawing_mode {
                             Some(DrawingMode::Paint) => {
-                                let brush_color_rgba = [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255];
-                                match self.draw_paint(ctx, available, self.brush_size, brush_color_rgba){
+                                match self.draw_paint(ctx, available, self.brush_size, [self.brush_color[0], self.brush_color[1], self.brush_color[2], 255]){
                                     true=>{
                                         ctx.set_cursor_icon(CursorIcon::Crosshair);
                                     },
@@ -667,7 +669,7 @@ impl App for ScreenshotStr {
                                 }
                             }
                             Some(DrawingMode::Erase) => {
-                                match self.erase(ctx, available,self.eraser_size) {
+                                match self.erase(ctx, available, self.eraser_size) {
                                     true=>{
                                         ctx.set_cursor_icon(CursorIcon::NotAllowed);
                                     },
@@ -675,6 +677,9 @@ impl App for ScreenshotStr {
                                         ctx.set_cursor_icon(CursorIcon::Default);
                                     }
                                 }
+                            }
+                            Some(DrawingMode::Shape) => {
+                                self.draw_rectangle(ctx, available, self.brush_size, [self.brush_color[0],self.brush_color[1],self.brush_color[2], 255])
                             }
                             _ => {}
                         }
@@ -694,7 +699,7 @@ impl App for ScreenshotStr {
                 });
             });
     }
-    
+
 }
 
 fn main() {
