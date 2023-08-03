@@ -1,21 +1,19 @@
 mod screenshots_module;
 mod hotkey_module;
-mod api_module;
 mod settings_module;
 mod state_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Key, Context, Window, ComboBox, TopBottomPanel, self, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}};
-use crate::api_module::api_module as api_mod;
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Key, Window, ComboBox, TopBottomPanel, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2}, egui};
+use crate::state_module::state_module::{take_screenshot,get_screens};
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::{cmp, path::PathBuf, thread};
-use std::time::{Duration, Instant};
+use std::time::{Duration};
 use eframe::egui::{Color32, Frame, Margin, Slider};
 use eframe::epaint::Stroke;
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
 use image::{EncodableLayout, ImageFormat};
 use tao::event_loop::{EventLoop,ControlFlow};
-use crate::screenshots_module::screenshot_module::Screenshot;
 use crate::settings_module::settings_module::*;
 use crate::state_module::state_module::{DrawingMode, ScreenshotStr, Shape};
 
@@ -53,7 +51,6 @@ impl MyImage {
         });
 
         let available = ui.available_size();
-        // println!("size: {:?}",available);
         let w = image.width() as f32;
         let h = image.height() as f32;
         let w_window = available.x;
@@ -168,7 +165,6 @@ impl App for ScreenshotStr {
                         .frame(false)
                     );
 
-                    // println!("textedit size: {:?}", ui.available_size());
                     let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
                     let shift_pressed = ctx.input(|is| is.modifiers.shift);
                     if enter_pressed && shift_pressed  {
@@ -203,15 +199,13 @@ impl App for ScreenshotStr {
                 if self.test {
                     let duration = Duration::from_secs(self.timer as u64);
                     if frame.info().window_info.focused {
-                        // println!("now minimized");
-                        self.screenshot=api_mod::take_screenshot(duration,self.screen);
+                        self.screenshot=take_screenshot(duration,self.screen);
                         self._convert_image();
                         self.show_image=true;
                         frame.set_minimized(false);
                         self.test=false;
                     
                     } else {
-                        // println!("not minimized");
                         thread::sleep(Duration::from_millis(10));
                     }
                 }
@@ -248,7 +242,7 @@ impl App for ScreenshotStr {
                 ComboBox::from_label("Screen")
                     .selected_text(screen_str)
                     .show_ui(ui, |ui| {
-                        let screens=api_mod::get_screens();
+                        let screens=get_screens();
                         for (index,screen) in screens.iter().enumerate() {
                             if ui.selectable_value(&mut self.screen, index, &format!("Screen {} ({}x{})",index,screen.display_info.height,screen.display_info.width)).clicked() {
                                 self.screen=index;
@@ -367,9 +361,7 @@ impl App for ScreenshotStr {
                                         },
                                         Some(DrawingMode::Pause) => {
                                             if picker.clicked_elsewhere() {
-                                                println!("before dm: {:?}", self.drawing_mode);
                                                 self.drawing_mode=self.previous_drawing_mode.clone();
-                                                println!("after Drawing Mode: {:?}", self.drawing_mode);
                                             }
                                         }
                                         _ => {}
@@ -484,7 +476,6 @@ fn main() {
     event_loop.run(move |_event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
         if let Ok(event) = global_hotkey_channel.try_recv() {
-            println!("{},{}",event.id,keyid_open);
             if keyid_open==event.id{
                 println!("Opening App");
                 println!("{:?}", startup_settings);
@@ -501,7 +492,7 @@ fn main() {
             if keyid_screenshot==event.id {
                 println!("Screenshot taken");
                 let startup_settings = read_settings_from_file("settings.json".to_string()).unwrap();
-                let ss = api_mod::take_screenshot(Duration::from_secs(0), 0);
+                let ss = take_screenshot(Duration::from_secs(0), 0);
                 ss.save_image(&PathBuf::from(startup_settings.path), ImageFormat::Png).unwrap();
             }
         }

@@ -150,7 +150,6 @@ pub mod screenshot_module{
             let y = y as i32;
             let r = r as i32;
             if x > 0 && x < width && y > 0 && y < height {
-                // println!("{}{}",x,y);
                 for i in (x - r)..=(x + r) {
                     for j in (y - r)..=(y + r) {
                         // Full circles
@@ -284,7 +283,6 @@ pub mod screenshot_module{
             for dr in -half_size..=half_size {
                 let r = radius + dr;
                 if (x0, y0) > (0, 0) && (x0, y0) < (width, height) {
-                    println!("center: {:?}, ending_point: {:?}, radius: {:?}, r: {}", (x0,y0), ending_point, radius, r);
                     draw_hollow_circle_mut(&mut self.screenshot, (x0, y0), r, color_rgba);
                     // Circle
                     /*
