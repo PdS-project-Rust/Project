@@ -49,7 +49,11 @@ pub mod state_module{
         pub instant:Instant,
         pub starting_point:Option<(f32, f32)>,
         pub upper_panel_size:Vec2,
-        pub test:bool,
+        pub screen_state:u8,
+        pub screenshot_taken:bool,
+        pub image_converted:bool,
+        pub window_pos:Pos2,
+        pub window_size:Vec2,
     }
 
     impl Default for ScreenshotStr {
@@ -77,7 +81,11 @@ pub mod state_module{
                 instant:Instant::now(),
                 starting_point:None,
                 upper_panel_size:Vec2::new(0.0,0.0),
-                test:false,
+                screen_state:0,
+                screenshot_taken:false,
+                image_converted:false,
+                window_pos:Pos2::new(0.0,0.0),
+                window_size:Vec2::new(0.0,0.0),
             }
         }
     }
@@ -103,6 +111,7 @@ pub mod state_module{
             );
 
             self.color_image = col_im;
+            self.image_converted = true;
         }
 
         fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Option<Pos2> {

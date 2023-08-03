@@ -3,7 +3,7 @@ mod hotkey_module;
 mod settings_module;
 mod state_module;
 
-use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Key, Window, ComboBox, TopBottomPanel, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2}, egui};
+use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Key, Window, ComboBox, TopBottomPanel, CursorIcon}, App, NativeOptions, epaint::{ColorImage, Vec2, Pos2}, egui};
 use crate::state_module::state_module::{take_screenshot,get_screens};
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::{cmp, path::PathBuf, thread};
@@ -12,7 +12,7 @@ use eframe::egui::{Color32, Frame, Margin, Slider};
 use eframe::epaint::Stroke;
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::ImageFormat;
+use image::{ImageFormat, DynamicImage};
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::settings_module::settings_module::*;
 use crate::state_module::state_module::{DrawingMode, ScreenshotStr, Shape};
@@ -196,6 +196,7 @@ impl App for ScreenshotStr {
                     });
                 });
         }
+       
         // header of the app
         TopBottomPanel::top("header").frame(
             Frame {
@@ -210,25 +211,46 @@ impl App for ScreenshotStr {
                 let timer_str = format!("{} Seconds", timer);
                 let screen_str = format!("Screen {}", screen);
                 self.upper_panel_size=ui.available_size();
-                if self.test {
-                    let duration = Duration::from_secs(self.timer as u64);
-                    if frame.info().window_info.focused {
-                        self.screenshot=take_screenshot(duration,self.screen);
-                        self._convert_image();
-                        self.show_image=true;
-                        frame.set_minimized(false);
-                        self.test=false;
-                    
-                    } else {
-                        thread::sleep(Duration::from_millis(10));
+
+                if self.screenshot_taken {
+                    match self.screen_state {
+                        0 => {
+                            frame.set_window_pos(Pos2::new(0.0,0.0));
+                            frame.set_window_size(Vec2::new(0.0,0.0));
+                            if frame.info().window_info.position.unwrap().x==0.0 && frame.info().window_info.position.unwrap().y==0.0 {
+                                self.screen_state=1;
+                            }
+                            
+                        },
+                        1 => {
+                            let duration = Duration::from_secs(self.timer as u64);
+                            self.screenshot=take_screenshot(duration,self.screen);
+                            self._convert_image();
+                            self.show_image=true;
+                            if self.image_converted {
+                                self.screen_state=2;
+                            }
+                          
+                        },
+                        2 => {
+                            frame.set_window_pos(self.window_pos);
+                            frame.set_window_size(self.window_size);
+                            
+                            self.screen_state=0;
+                            self.screenshot_taken=false;
+                        },
+                        _ => {
+    
+                        }
                     }
                 }
 
-
                 ui.horizontal(|ui| {
                     if ui.button("New Screenshot").clicked() {
-                        frame.set_minimized(true);
-                        self.test = true;
+                        self.window_size=frame.info().window_info.size;
+                        self.window_pos=frame.info().window_info.position.unwrap();
+                        self.screenshot_taken=true;
+
                     }
 
                     ui.separator();
