@@ -212,38 +212,7 @@ impl App for ScreenshotStr {
                 let screen_str = format!("Screen {}", screen);
                 self.upper_panel_size=ui.available_size();
 
-                if self.screenshot_taken {
-                    match self.screen_state {
-                        0 => {
-                            frame.set_window_pos(Pos2::new(0.0,0.0));
-                            frame.set_window_size(Vec2::new(0.0,0.0));
-                            if frame.info().window_info.position.unwrap().x==0.0 && frame.info().window_info.position.unwrap().y==0.0 {
-                                self.screen_state=1;
-                            }
-                            
-                        },
-                        1 => {
-                            let duration = Duration::from_secs(self.timer as u64);
-                            self.screenshot=take_screenshot(duration,self.screen);
-                            self._convert_image();
-                            self.show_image=true;
-                            if self.image_converted {
-                                self.screen_state=2;
-                            }
-                          
-                        },
-                        2 => {
-                            frame.set_window_pos(self.window_pos);
-                            frame.set_window_size(self.window_size);
-                            
-                            self.screen_state=0;
-                            self.screenshot_taken=false;
-                        },
-                        _ => {
-    
-                        }
-                    }
-                }
+                self.check_minimization(frame);
 
                 ui.horizontal(|ui| {
                     if ui.button("New Screenshot").clicked() {
