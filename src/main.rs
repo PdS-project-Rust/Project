@@ -141,47 +141,49 @@ impl App for ScreenshotStr {
                     });
                 });
         }
+            // text edit window
 
-        // text edit window
         if self.text_edit_dialog {
-            //text edit window without titlebar
-            Window::new("TextEdit")
-                .default_pos(self.text_edit_dialog_position)
-                .title_bar(false)
-                .collapsible(false)
-                .resizable(true)
-                //slightly transparent but with borders
-                .frame(
-                    Frame {
-                        fill: Color32::TRANSPARENT,
-                        stroke: Stroke::new(1.0, Color32::WHITE),
-                        ..Default::default()
-                    })
-                .show(ctx, |ui| {
-                    ui.add(
-                        TextEdit::multiline(&mut self.text)
-                        .font(egui::FontId::proportional(self.tool_size))
-                        .text_color(Color32::from_rgb(self.tool_color[0], self.tool_color[1], self.tool_color[2]))
-                        .frame(false)
-                    );
+        //text edit window without titlebar
+        Window::new("TextEdit")
+            .default_pos(self.text_edit_dialog_position)
+            .title_bar(false)
+            .collapsible(false)
+            .resizable(true)
+            .frame(
+                egui::Frame {
+                    fill: Color32::from_rgba_unmultiplied(0, 0, 0, 50),
+                    stroke: Stroke::new(1.0, Color32::WHITE),
+                    ..Default::default()
+                })
+            .show(ctx, |ui| {
+                ui.add(
+                    TextEdit::multiline(&mut self.text)
+                    .font(egui::FontId::proportional(self.tool_size))
+                    .text_color(Color32::from_rgb(self.tool_color[0], self.tool_color[1], self.tool_color[2]))
+                    .frame(false)
+                );
 
-                    let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
-                    let shift_pressed = ctx.input(|is| is.modifiers.shift);
-                    if enter_pressed && shift_pressed  {
-                        //add new line
-                        self.text = format!("{}\n", self.text);
-                    } else if enter_pressed {
-                        self.text_edit_dialog=false;
-                        let textbox_pos = self.text_edit_dialog_position;
-                        self.screenshot.draw_text(&self.text, textbox_pos.x, textbox_pos.y, self.tool_color, self.tool_size);
-                        self._convert_image();
+                // println!("textedit size: {:?}", ui.available_size());
+                let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
+                let shift_pressed = ctx.input(|is| is.modifiers.shift);
+                if enter_pressed && shift_pressed  {
+                    //add new line
+                    self.text = format!("{}\n", self.text);
+                } else if enter_pressed {
+                    self.text_edit_dialog=false;
+                    let textbox_pos = self.calculate_texture_coordinates(self.text_edit_dialog_position, 
+                        ui.available_size(), ctx.used_size()).unwrap();
+                    self.screenshot.draw_text(&self.text, textbox_pos.x, textbox_pos.y, self.tool_color, self.tool_size);
+                    self._convert_image();
 
-                    }
+                }
+                println!("position: {:?}", self.text_edit_dialog_position);
 
-                });
+            });
 
         }
-        
+       
         // error dialog 
         if self.error_dialog {
             Window::new("Error")
@@ -362,7 +364,7 @@ impl App for ScreenshotStr {
                                         },
                                         Some(DrawingMode::Text) => {
                                             ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                            ui.color_edit_button_srgb(&mut self.tool_color);
+                                            self.drawing_mode=Some(DrawingMode::Text);
                                         },
                                         Some(DrawingMode::Pause) => {
                                             if picker.clicked_elsewhere() {
@@ -459,6 +461,17 @@ impl App for ScreenshotStr {
                             }
                             _ => {}
                         }
+                    }
+
+                    // if text mode is active and if image is clicked open text dialog
+                    if self.drawing_mode == Some(DrawingMode::Text) && self.show_image {
+                        ctx.input(|ui| {
+                            if ui.pointer.any_down() {
+                                self.text_edit_dialog_position = ui.pointer.interact_pos().unwrap();
+                                self.text_edit_dialog = true;
+
+                            }
+                        });
                     }
                 });
             });
