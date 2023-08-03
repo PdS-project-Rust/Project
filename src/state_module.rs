@@ -114,7 +114,7 @@ pub mod state_module{
             self.image_converted = true;
         }
 
-        fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Option<Pos2> {
+        pub fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Option<Pos2> {
             let w = self.screenshot.get_width().unwrap() as f32;
             let h = self.screenshot.get_height().unwrap() as f32;
             //x is 640 out of 640, y is 356 out of 400 (-22*2 equal to borders+top and bottom)
