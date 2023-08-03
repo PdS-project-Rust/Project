@@ -7,12 +7,12 @@ use eframe::{egui::{CentralPanel, Layout, Align, TextEdit, Direction, Key, Windo
 use crate::state_module::state_module::{take_screenshot,get_screens};
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::{cmp, path::PathBuf, thread};
-use std::time::{Duration};
+use std::time::Duration;
 use eframe::egui::{Color32, Frame, Margin, Slider};
 use eframe::epaint::Stroke;
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{ImageFormat};
+use image::ImageFormat;
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::settings_module::settings_module::*;
 use crate::state_module::state_module::{DrawingMode, ScreenshotStr, Shape};
@@ -182,6 +182,20 @@ impl App for ScreenshotStr {
 
         }
         
+        // error dialog 
+        if self.error_dialog {
+            Window::new("Error")
+                .collapsible(false)
+                .resizable(false)
+                .show(ctx, |ui| {
+                    ui.label(format!("Error: {}", self.error_message));
+                    ui.horizontal(|ui| {
+                        if ui.button("Ok").clicked() {
+                            self.error_dialog=false;
+                        }
+                    });
+                });
+        }
         // header of the app
         TopBottomPanel::top("header").frame(
             Frame {
