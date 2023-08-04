@@ -1,10 +1,8 @@
-use eframe::{egui, epaint::Color32};
-
 pub mod state_module{
     use std::{error::Error, fmt::{Display, Formatter}};
-    use eframe::{egui::{Context, Button}};
+    use eframe::egui::Context;
     use std::time::{Duration, Instant};
-    use eframe::egui::{Margin};
+    use eframe::egui::Margin;
     use image::{EncodableLayout, ImageFormat};
     use crate::screenshots_module::screenshot_module::Screenshot;
     use crate::settings_module::settings_module::*;
@@ -14,7 +12,6 @@ pub mod state_module{
     use eframe::egui::{Color32, Frame, Rect, Slider};
     use eframe::epaint::Stroke;
     use rusttype::Scale;
-    use crate::settings_module::settings_module::*;
 
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -849,7 +846,7 @@ pub mod state_module{
                                 },
                                 Some(DrawingMode::Text)=>{
                                     ctx.input(|ui| {
-                                        if (ui.pointer.any_down() && !self.text_edit_dialog) {
+                                        if ui.pointer.any_down() && !self.text_edit_dialog {
                                             self.text_edit_dialog_position = ui.pointer.interact_pos().unwrap();
                                             self.text_edit_dialog = true;
                                         }

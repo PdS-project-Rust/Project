@@ -3,17 +3,17 @@ mod hotkey_module;
 mod settings_module;
 mod state_module;
 
-use eframe::{App, NativeOptions, egui};
-use crate::state_module::state_module::{take_screenshot};
+use eframe::{NativeOptions, egui};
+use crate::state_module::state_module::take_screenshot;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
-use std::{path::PathBuf};
+use std::path::PathBuf;
 use std::time::Duration;
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
-use image::{ImageFormat};
+use image::ImageFormat;
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::settings_module::settings_module::*;
-use crate::state_module::state_module::{ScreenshotStr};
+use crate::state_module::state_module::ScreenshotStr;
 
 fn build_gui() -> () {
     //APP CONF
