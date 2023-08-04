@@ -338,7 +338,7 @@ impl App for ScreenshotStr {
                         }
 
                         // shapes
-                        if ui.button("\u{2B55}").clicked() {
+                        if ui.button("\u{2B1F}").clicked() {
                             self.toggle_drawing_mode(DrawingMode::Shape);
                             let result=self.screenshot.save_intermediate_image();
                             self.manage_errors(result);
