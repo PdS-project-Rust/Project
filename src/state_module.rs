@@ -117,7 +117,7 @@ pub mod state_module{
             self.image_converted = true;
         }
 
-        pub fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2) -> Option<Pos2> {
+        pub fn calculate_texture_coordinates(&self, cursor_pos: Pos2, available: Vec2, total_window:Vec2, return_always :bool) -> Option<Pos2> {
             let w = self.screenshot.get_width().unwrap() as f32;
             let h = self.screenshot.get_height().unwrap() as f32;
             //x is 640 out of 640, y is 356 out of 400 (-22*2 equal to borders+top and bottom)
@@ -134,17 +134,36 @@ pub mod state_module{
                 y: (cursor_pos.y - image_pos_y)/h_scale,
             };
             if image_cursor_pos.x>w || image_cursor_pos.y>h || image_cursor_pos.y < 0.0 || image_cursor_pos.x < 0.0 {
-                None
+                if !return_always {
+                    None
+                }else{
+                    Some(image_cursor_pos)
+                }
             }else{
                 Some(image_cursor_pos)
             }
+        }
+
+        pub fn calculate_rect_image(&self, available: Vec2, total_window:Vec2)->(f32,f32,f32,f32,f32,f32){
+            let w = self.screenshot.get_width().unwrap() as f32;
+            let h = self.screenshot.get_height().unwrap() as f32;
+            //x is 640 out of 640, y is 356 out of 400 (-22*2 equal to borders+top and bottom)
+            let w_window = available.x;
+            let h_window = available.y;
+            let height = h_window.min(w_window * h / w);
+            let width = height * w / h;
+            let h_scale = height / h;
+            let w_scale = width / w;
+            let image_pos_x = (total_window.x - width) / 2.0;
+            let image_pos_y = self.upper_panel_size.y + Margin::same(1.0).sum().y +(h_window-height)/2.0;
+            return (image_pos_x,image_pos_y,width,height,w_scale,h_scale)
         }
 
         pub fn draw_paint(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) -> bool {
             ctx.input(|is| -> bool {
                 let pos = is.pointer.interact_pos();
                 if let Some(pos) = pos {
-                    let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
+                    let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size(),false);
                     if texture_coordinates.is_some() {
                         let texture_coordinates=texture_coordinates.unwrap();
                         let x = texture_coordinates.x;
@@ -178,7 +197,7 @@ pub mod state_module{
             ctx.input(|is| -> bool {
                 let pos = is.pointer.interact_pos();
                 if let Some(pos) = pos {
-                    let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size());
+                    let texture_coordinates = self.calculate_texture_coordinates(pos, available,ctx.used_size(),false);
                     if texture_coordinates.is_some() {
                         let texture_coordinates=texture_coordinates.unwrap();
                         let x = texture_coordinates.x;
@@ -216,7 +235,7 @@ pub mod state_module{
             ctx.input(|ui| -> bool{
                 let pos = ui.pointer.interact_pos();
                 if let Some(pos) = pos {
-                    let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
+                    let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size(),false);
                     if texture_coordinates.is_some(){
                         let texture_coordinates=texture_coordinates.unwrap();
                         let x = texture_coordinates.x;
@@ -238,7 +257,7 @@ pub mod state_module{
             return ctx.input(|is| {
                 let pos = is.pointer.interact_pos();
                 if let Some(pos) = pos {
-                    let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
+                    let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size(),false);
                     if let Some(texture_coordinates) = texture_coordinates {
                         let x = texture_coordinates.x;
                         let y = texture_coordinates.y;
@@ -282,7 +301,7 @@ pub mod state_module{
             ctx.input(|is| {
                 let pos = is.pointer.interact_pos();
                 if let Some(pos) = pos {
-                    let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size());
+                    let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size(),false);
                     if let Some(texture_coordinates) = texture_coordinates {
                         let x = texture_coordinates.x;
                         let y = texture_coordinates.y;

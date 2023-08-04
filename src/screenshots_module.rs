@@ -284,37 +284,17 @@ pub mod screenshot_module{
                 let r = radius + dr;
                 if (x0, y0) > (0, 0) && (x0, y0) < (width, height) {
                     draw_hollow_circle_mut(&mut self.screenshot, (x0, y0), r, color_rgba);
-                    // Circle
-                    /*
-                    for i in (x0 - r)..=(x0 + r) {
-                        for j in (y0 - r)..=(y0 + r) {
-                            if ((x0-i)*(x0-i) + (y0-j)*(y0-j)) == r*r {
-                                if i >= 0 && i < width && j >= 0 && j < height {
-                                    let color_pixel = Rgba(color);
-                                    self.screenshot.put_pixel(i as u32, j as u32, color_rgba);
-                                }
-                            }
-                        }
-                    }
-                    */
                 }
             }
-
-
-
         }
 
 
-        pub fn draw_text(&mut self, text: &String, x: f32, y: f32, color: [u8; 3], font_size: f32) {
+        pub fn draw_text(&mut self, text: &String, x: f32, y: f32, color: [u8; 3], scale:Scale) {
             // Load a font.
             let mut dy =0;
+            let increment=(scale.y*1.1) as i32;
             let lines = text.split("\n");
             for line in lines {
-                dy += (font_size*1.2 + 5.0) as i32;
-                let scale = Scale {
-                    x: font_size*2.0,
-                    y: font_size*2.0,
-                };
                 let font = Vec::from(include_bytes!("../fonts/ARIALN.TTF") as &[u8]);
                 let font = Font::try_from_vec(font).unwrap();
                 let color_rgba: [u8; 4] = [color[0], color[1], color[2], 255];
@@ -326,7 +306,7 @@ pub mod screenshot_module{
                     &font,
                     line
                 );
-
+                dy += scale.y as i32;
             }
         }
     }

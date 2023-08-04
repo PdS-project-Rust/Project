@@ -8,11 +8,12 @@ use crate::state_module::state_module::{take_screenshot,get_screens};
 use crate::hotkey_module::hotkey_module::HotkeyManager;
 use std::{cmp, path::PathBuf, thread};
 use std::time::Duration;
-use eframe::egui::{Color32, Frame, Margin, Slider};
+use eframe::egui::{Color32, Frame, Margin, Rect, Slider};
 use eframe::epaint::Stroke;
 use global_hotkey::GlobalHotKeyEvent;
 use global_hotkey::hotkey::Modifiers;
 use image::{ImageFormat, DynamicImage};
+use rusttype::Scale;
 use tao::event_loop::{EventLoop,ControlFlow};
 use crate::settings_module::settings_module::*;
 use crate::state_module::state_module::{DrawingMode, ScreenshotStr, Shape};
@@ -132,7 +133,6 @@ impl App for ScreenshotStr {
                         //turn pathbuf into string
                         ui.add(TextEdit::singleline(&mut self.settings.path));
                     });
-
                     //close
                     ui.horizontal(|ui| {
                         if ui.button("Cancel").clicked() {
@@ -147,47 +147,6 @@ impl App for ScreenshotStr {
                         }
                     });
                 });
-        }
-            // text edit window
-
-        if self.text_edit_dialog {
-        //text edit window without titlebar
-        Window::new("TextEdit")
-            .default_pos(self.text_edit_dialog_position)
-            .title_bar(false)
-            .collapsible(false)
-            .resizable(true)
-            .frame(
-                egui::Frame {
-                    fill: Color32::from_rgba_unmultiplied(0, 0, 0, 50),
-                    stroke: Stroke::new(1.0, Color32::WHITE),
-                    ..Default::default()
-                })
-            .show(ctx, |ui| {
-                ui.add(
-                    TextEdit::multiline(&mut self.text)
-                    .font(egui::FontId::proportional(self.tool_size))
-                    .text_color(Color32::from_rgb(self.tool_color[0], self.tool_color[1], self.tool_color[2]))
-                    .frame(false)
-                );
-
-                let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
-                let shift_pressed = ctx.input(|is| is.modifiers.shift);
-                if enter_pressed && shift_pressed  {
-                    //add new line
-                    self.text = format!("{}\n", self.text);
-                } else if enter_pressed {
-                    self.text_edit_dialog=false;
-                    let textbox_pos = self.calculate_texture_coordinates(self.text_edit_dialog_position, 
-                        ui.available_size(), ctx.used_size()).unwrap();
-                    self.screenshot.draw_text(&self.text, textbox_pos.x, textbox_pos.y, self.tool_color, self.tool_size);
-                    self._convert_image();
-
-                }
-                println!("position: {:?}", self.text_edit_dialog_position);
-
-            });
-
         }
        
         // error dialog 
@@ -405,11 +364,57 @@ impl App for ScreenshotStr {
 
                 }
             });
-
             CentralPanel::default()
             .frame(Frame::none())
             .show(ctx, |ui| {
             ui.with_layout(Layout::centered_and_justified(Direction::TopDown), |ui| {
+                    let values_window=self.calculate_rect_image(ui.available_size(),ctx.used_size());
+                    // text edit window
+                    if self.text_edit_dialog {
+                        //text edit window without titlebar
+                        Window::new("TextEdit")
+                            .default_pos(self.text_edit_dialog_position)
+                            .title_bar(false)
+                            .collapsible(false)
+                            .resizable(false)
+                            .default_width(values_window.3/4.0)
+                            .movable(true)
+                            .drag_bounds(Rect::from_min_size(Pos2::new(values_window.0,values_window.1),Vec2::new(values_window.2,values_window.3)))
+                            .frame(
+                                egui::Frame {
+                                    fill: Color32::from_rgba_unmultiplied(0, 0, 0, 50),
+                                    stroke: Stroke::new(1.0, Color32::WHITE),
+                                    ..Default::default()
+                                })
+                            .show(ctx, |ui_window| {
+                                let w=ui_window.add(
+                                    TextEdit::multiline(&mut self.text)
+                                        .font(egui::FontId::proportional(self.tool_size))
+                                        .text_color(Color32::from_rgb(self.tool_color[0], self.tool_color[1], self.tool_color[2]))
+                                        .frame(false)
+                                );
+                                let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
+                                let shift_pressed = ctx.input(|is| is.modifiers.shift);
+                                if enter_pressed && shift_pressed  {
+                                    //add new line
+                                    self.text = format!("{}\n", self.text);
+                                } else if enter_pressed {
+                                    self.text_edit_dialog=false;
+                                    let textbox_pos = self.calculate_texture_coordinates(w.rect.left_top(),
+                                                                                         ui.available_size(), ctx.used_size(),true).unwrap();
+                                    println!("real pos: {:?}",textbox_pos);
+                                    let x=self.tool_size/values_window.4;
+                                    let y=self.tool_size/values_window.5;
+                                    self.screenshot.draw_text(&self.text, textbox_pos.x.max(0.0), textbox_pos.y.max(0.0), self.tool_color, Scale{x,y});
+                                    self._convert_image();
+
+                                }
+                                println!("position: {:?}", w.rect);
+                                println!("available: {:?}, ctx: {:?}",ui.available_size(),ctx.used_size());
+                                let textbox_pos=self.calculate_texture_coordinates(w.rect.left_top(), ui.available_size(), ctx.used_size(),true).unwrap();
+                                println!("real pos: {:?}",textbox_pos);
+                            });
+                    }
                     if self.show_image {
                         let available=ui.available_size();
                         let mut my_image = MyImage::new();
@@ -472,20 +477,17 @@ impl App for ScreenshotStr {
                                     }
                                     self._convert_image();
                                 }
-                            }
+                            },
+                            Some(DrawingMode::Text)=>{
+                                ctx.input(|ui| {
+                                    if ui.pointer.any_down() {
+                                        self.text_edit_dialog_position = ui.pointer.interact_pos().unwrap();
+                                        self.text_edit_dialog = true;
+                                    }
+                                });
+                            },
                             _ => {}
                         }
-                    }
-
-                    // if text mode is active and if image is clicked open text dialog
-                    if self.drawing_mode == Some(DrawingMode::Text) && self.show_image {
-                        ctx.input(|ui| {
-                            if ui.pointer.any_down() {
-                                self.text_edit_dialog_position = ui.pointer.interact_pos().unwrap();
-                                self.text_edit_dialog = true;
-
-                            }
-                        });
                     }
                 });
             });
