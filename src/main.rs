@@ -81,17 +81,21 @@ impl App for ScreenshotStr {
                         ui.label("Save as?");
                         if ui.button("PNG").clicked() {
                             self.format=ImageFormat::Png;
-                            self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                            //error handling
+                            let result= self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
+                            self.manage_errors(result);
                             self.save_dialog=false;
                         }
                         if ui.button("JPG").clicked() {
                             self.format=ImageFormat::Jpeg;
-                            self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                            let result=self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
+                            self.manage_errors(result);
                             self.save_dialog=false;
                         }
                         if ui.button("GIF").clicked() {
                             self.format=ImageFormat::Gif;
-                            self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format).unwrap();
+                            let result=self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
+                            self.manage_errors(result);
                             self.save_dialog=false;
                         }
 
@@ -132,10 +136,13 @@ impl App for ScreenshotStr {
                     //close
                     ui.horizontal(|ui| {
                         if ui.button("Cancel").clicked() {
+                            self.drawing_mode=self.previous_drawing_mode;
                             self.settings_dialog=false;
                         }
                         if ui.button("Save").clicked() {
-                            write_settings_to_file("settings.json".to_string(), &self.settings).unwrap();
+                            let result=write_settings_to_file("settings.json".to_string(), &self.settings);
+                            self.drawing_mode=self.previous_drawing_mode;
+                            self.manage_errors(result);
                             self.settings_dialog=false;
                         }
                     });
@@ -164,7 +171,6 @@ impl App for ScreenshotStr {
                     .frame(false)
                 );
 
-                // println!("textedit size: {:?}", ui.available_size());
                 let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
                 let shift_pressed = ctx.input(|is| is.modifiers.shift);
                 if enter_pressed && shift_pressed  {
@@ -193,6 +199,7 @@ impl App for ScreenshotStr {
                     ui.label(format!("Error: {}", self.error_message));
                     ui.horizontal(|ui| {
                         if ui.button("Ok").clicked() {
+                            self.drawing_mode=self.previous_drawing_mode;
                             self.error_dialog=false;
                         }
                     });
@@ -267,6 +274,8 @@ impl App for ScreenshotStr {
                 // settings button in the top right corner
                 ui.with_layout(Layout::top_down(Align::RIGHT), |ui| {
                     if ui.button("\u{2699}").clicked() {
+                        self.previous_drawing_mode=self.drawing_mode;
+                        self.drawing_mode=None;
                         self.settings_dialog=true;
                     }
                 });
@@ -291,14 +300,16 @@ impl App for ScreenshotStr {
                     ui.horizontal(|ui| {
                         // rotate left
                         if ui.button("\u{27F3}").clicked() {
-                            self.screenshot.rotate_sx_90().unwrap();
+                            let result=self.screenshot.rotate_sx_90();
+                            self.manage_errors(result);
                             self._convert_image();
                             self.show_image=true;
                         }
 
                         // rotate right
                         if ui.button("\u{27F2}").clicked() {
-                            self.screenshot.rotate_dx_90().unwrap();
+                            let result=self.screenshot.rotate_dx_90();
+                            self.manage_errors(result);
                             self._convert_image();
                             self.show_image=true;
                         }
@@ -306,7 +317,9 @@ impl App for ScreenshotStr {
                         // crop
                         if ui.button("\u{2702}").clicked() {
                             self.toggle_drawing_mode(DrawingMode::Crop);
-                            self.screenshot.save_intermediate_image().unwrap();
+                            let result=self.screenshot.save_intermediate_image();
+                            self.crop_screenshot_tmp=self.screenshot.clone();
+                            self.manage_errors(result);
                         }
 
                         // draw
@@ -327,7 +340,8 @@ impl App for ScreenshotStr {
                         // shapes
                         if ui.button("\u{2B55}").clicked() {
                             self.toggle_drawing_mode(DrawingMode::Shape);
-                            self.screenshot.save_intermediate_image().unwrap();
+                            let result=self.screenshot.save_intermediate_image();
+                            self.manage_errors(result);
                         }
 
                         // text
@@ -339,7 +353,7 @@ impl App for ScreenshotStr {
                             // Color Picker, Size Picker for Brush, Highlight, Erase, Shapes, Text
                             ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
                                 //SIZE FOR ALL
-                                if self.drawing_mode!=Some(DrawingMode::Crop) && self.drawing_mode!= Some(DrawingMode::Erase) {
+                                if self.drawing_mode!=Some(DrawingMode::Crop) && self.drawing_mode!= Some(DrawingMode::Erase) && self.drawing_mode!=None{
                                     //with color picker
                                     let picker = ui.color_edit_button_srgb(&mut self.tool_color).clone();
                                     match self.drawing_mode {
@@ -368,7 +382,7 @@ impl App for ScreenshotStr {
                                         },
                                         Some(DrawingMode::Pause) => {
                                             if picker.clicked_elsewhere() {
-                                                self.drawing_mode=self.previous_drawing_mode.clone();
+                                                self.drawing_mode=self.previous_drawing_mode;
                                             }
                                         }
                                         _ => {}
@@ -378,9 +392,6 @@ impl App for ScreenshotStr {
                                     match self.drawing_mode {
                                         Some(DrawingMode::Erase) => {
                                             ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
-                                        },
-                                        Some(DrawingMode::Crop)=>{
-
                                         },
                                         _=>{}
                                     }
@@ -455,10 +466,11 @@ impl App for ScreenshotStr {
                                     let width = (coordinates.0.0 - coordinates.1.0).abs() as i32;
                                     let min_x=cmp::min(coordinates.0.0 as u32,coordinates.1.0 as u32);
                                     let min_y=cmp::min(coordinates.0.1 as u32,coordinates.1.1 as u32);
-                                    if (height, width) > (19, 10) {
-                                        self.screenshot.resize_image(min_x+2, min_y+2, height-4, width-4).unwrap();
-                                        self._convert_image();
+                                    let result=self.screenshot.resize_image(min_x+2, min_y+2, height-4, width-4);
+                                    if self.manage_errors(result).is_none(){
+                                        self.screenshot=self.crop_screenshot_tmp.clone();
                                     }
+                                    self._convert_image();
                                 }
                             }
                             _ => {}
@@ -489,6 +501,7 @@ fn main() {
     let global_hotkey_channel = GlobalHotKeyEvent::receiver();
     //READING FROM FILE
     let startup_settings = read_settings_from_file("settings.json".to_string()).unwrap();
+    println!("{:?}", startup_settings);
     let key_open = startup_settings.get_open_hotkey();
     let key_screenshot = startup_settings.get_screenshot_hotkey();
     //REGISTERING THE HOTKEYS FROM FILE

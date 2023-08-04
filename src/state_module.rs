@@ -1,4 +1,5 @@
 pub mod state_module{
+    use std::error::Error;
     use eframe::{egui::{Context}, epaint::{ColorImage, Vec2, Pos2}};
     use std::time::{Duration, Instant};
     use eframe::egui::{Margin};
@@ -54,6 +55,7 @@ pub mod state_module{
         pub image_converted:bool,
         pub window_pos:Pos2,
         pub window_size:Vec2,
+        pub crop_screenshot_tmp:Screenshot,
     }
 
     impl Default for ScreenshotStr {
@@ -86,6 +88,7 @@ pub mod state_module{
                 image_converted:false,
                 window_pos:Pos2::new(0.0,0.0),
                 window_size:Vec2::new(0.0,0.0),
+                crop_screenshot_tmp:Screenshot::new_empty(),
             }
         }
     }
@@ -354,9 +357,20 @@ pub mod state_module{
                     }
                 }
             }
-
-
         }
+        pub fn manage_errors <E>(&mut self,result: Result<E,Box<dyn Error>>)->Option<E>{
+            match result {
+                Ok(E)=>Some(E),
+                Err(e)=> {
+                    self.previous_drawing_mode=self.drawing_mode;
+                    self.drawing_mode=None;
+                    self.error_message = e.to_string();
+                    self.error_dialog=true;
+                    None
+                }
+            }
+        }
+
     }
 
     pub fn get_screens() -> Vec<Screen> {

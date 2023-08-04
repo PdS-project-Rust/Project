@@ -22,7 +22,7 @@ pub mod screenshot_module{
         #[error("extension error")]
         ExtensionError,
     }
-
+    #[derive(Clone)]
     pub struct Screenshot {
         screenshot: DynamicImage,
         original_image: DynamicImage,
