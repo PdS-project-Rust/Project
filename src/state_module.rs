@@ -1,6 +1,8 @@
+use eframe::{egui, epaint::Color32};
+
 pub mod state_module{
-    use std::error::Error;
-    use eframe::{egui::{Context}};
+    use std::{error::Error, fmt::{Display, Formatter}};
+    use eframe::{egui::{Context, Button}};
     use std::time::{Duration, Instant};
     use eframe::egui::{Margin};
     use image::{EncodableLayout, ImageFormat};
@@ -24,6 +26,20 @@ pub mod state_module{
         Text,
         Pause,
         Crop
+    }
+
+    impl Display for DrawingMode {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            match self {
+                DrawingMode::Paint => write!(f, "Paint"),
+                DrawingMode::Highlight => write!(f, "Highlight"),
+                DrawingMode::Erase => write!(f, "Erase"),
+                DrawingMode::Shape => write!(f, "Shape"),
+                DrawingMode::Text => write!(f, "Text"),
+                DrawingMode::Pause => write!(f, "Pause"),
+                DrawingMode::Crop => write!(f, "Crop"),
+            }
+        }
     }
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -571,7 +587,7 @@ pub mod state_module{
 
             });
 
-// footer of the app
+            // footer of the app
             TopBottomPanel::bottom("footer")
                 .frame(
                     Frame {
@@ -587,6 +603,7 @@ pub mod state_module{
                         ui.horizontal(|ui| {
                             // rotate left
                             if ui.button("\u{27F3}").clicked() {
+                                self.drawing_mode=None;
                                 self.text_edit_dialog=false;
                                 let result=self.screenshot.rotate_sx_90();
                                 self.manage_errors(result);
@@ -596,6 +613,7 @@ pub mod state_module{
 
                             // rotate right
                             if ui.button("\u{27F2}").clicked() {
+                                self.drawing_mode=None;
                                 self.text_edit_dialog=false;
                                 let result=self.screenshot.rotate_dx_90();
                                 self.manage_errors(result);
@@ -642,6 +660,11 @@ pub mod state_module{
                             if ui.button("\u{1F1F9}").clicked() {
                                 self.text_edit_dialog=false;
                                 self.toggle_drawing_mode(DrawingMode::Text);
+                            }
+
+                            // selected tool
+                            if self.drawing_mode.is_some() {
+                                ui.label(self.drawing_mode.unwrap().to_string());
                             }
 
                             if self.drawing_mode.is_some() {
@@ -705,6 +728,7 @@ pub mod state_module{
 
                     }
                 });
+                
             CentralPanel::default()
                 .frame(Frame::none())
                 .show(ctx, |ui| {
