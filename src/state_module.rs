@@ -76,7 +76,7 @@ pub mod state_module{
                 text_edit_dialog_position: Pos2::new(0.0,0.0),
                 text: String::new(),
                 shape:Some(Shape::Rectangle),
-                tool_color:[255,0,0],
+                tool_color:[0,0,0],
                 tool_size:10.0,
                 settings_dialog:false,
                 settings:Settings::default(),
