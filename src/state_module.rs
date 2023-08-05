@@ -74,6 +74,7 @@ pub mod state_module{
         pub window_pos:Pos2,
         pub window_size:Vec2,
         pub crop_screenshot_tmp:Screenshot,
+        pub saved_to_clipboard_dialog: bool,
     }
 
     impl Default for ScreenshotStr {
@@ -107,6 +108,7 @@ pub mod state_module{
                 window_pos:Pos2::new(0.0,0.0),
                 window_size:Vec2::new(0.0,0.0),
                 crop_screenshot_tmp:Screenshot::new_empty(),
+                saved_to_clipboard_dialog: false,
             }
         }
     }
@@ -452,7 +454,23 @@ pub mod state_module{
                         });
                     });
             }
-
+     
+            //save to clipboard dialog
+            if self.saved_to_clipboard_dialog {
+                Window::new("Save Screenshot")
+                    .collapsible(false)
+                    .resizable(false)
+                    .movable(false)
+                    .show(ctx, |ui| {
+                        if ui.label("Saved to clipboard!").clicked_elsewhere() {
+                            self.saved_to_clipboard_dialog=false;
+                        };
+                        if ui.button("Ok").clicked() {
+                            self.saved_to_clipboard_dialog=false;
+                        }
+                    });
+            }
+     
             // settings dialog
             if self.settings_dialog {
                 Window::new("Settings")
@@ -529,6 +547,7 @@ pub mod state_module{
                         self.window_size=frame.info().window_info.size;
                         self.window_pos=frame.info().window_info.position.unwrap();
                         self.screenshot_taken=true;
+                        self.saved_to_clipboard_dialog = true;
 
                     }
 
