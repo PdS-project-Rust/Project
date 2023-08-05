@@ -50,6 +50,15 @@ pub mod settings_module {
     pub fn write_settings_to_file(filename: String, settings: &Settings) -> Result<(), Box<dyn Error>> {
         let file = std::fs::File::create(filename)?;
         let writer = std::io::BufWriter::new(file);
+    
+        //check if path is valid
+        if !std::path::Path::new(&settings.path).exists() {
+            let sett=Settings::default();
+            serde_json::to_writer(writer, &sett)?;
+            return Err("Path does not exist".to_string().into());
+        }
+
+        //check if hotkey is at least 1 character long
         if settings.open.len()<1 || settings.quick.len()<1 {
             let sett=Settings::default();
             serde_json::to_writer(writer, &sett)?;
