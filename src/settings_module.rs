@@ -50,8 +50,15 @@ pub mod settings_module {
     pub fn write_settings_to_file(filename: String, settings: &Settings) -> Result<(), Box<dyn Error>> {
         let file = std::fs::File::create(filename)?;
         let writer = std::io::BufWriter::new(file);
-        serde_json::to_writer(writer, settings)?;
-        Ok(())
+        if settings.open.len()<1 || settings.quick.len()<1 {
+            let sett=Settings::default();
+            serde_json::to_writer(writer, &sett)?;
+            Err("Hotkey must be at least 1 character long".to_string().into())
+        } else {
+            serde_json::to_writer(writer, settings)?;
+            Ok(())
+    
+        }
     }
         
 
