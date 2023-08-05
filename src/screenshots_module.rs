@@ -292,7 +292,6 @@ pub mod screenshot_module{
         pub fn draw_text(&mut self, text: &String, x: f32, y: f32, color: [u8; 3], scale:Scale) {
             // Load a font.
             let mut dy =0;
-            let increment=(scale.y*1.1) as i32;
             let lines = text.split("\n");
             for line in lines {
                 let font = Vec::from(include_bytes!("../fonts/ARIALN.TTF") as &[u8]);
