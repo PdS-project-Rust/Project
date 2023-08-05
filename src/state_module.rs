@@ -481,12 +481,16 @@ pub mod state_module{
                         ui.horizontal(|ui| {
                             ui.label("Open App");
                             ui.label("CTRL + ");
-                            ui.add(TextEdit::singleline(&mut self.settings.open).desired_width(ui.available_width()/4.0));
+                            ui.add(TextEdit::singleline(&mut self.settings.open)
+                                .char_limit(1)
+                                .desired_width(ui.available_width()/4.0));
                         });
                         ui.horizontal(|ui| {
                             ui.label("Quick Screenshot");
                             ui.label("CTRL + ");
-                            ui.add(TextEdit::singleline(&mut self.settings.quick).desired_width(ui.available_width()/4.0));
+                            ui.add(TextEdit::singleline(&mut self.settings.quick)
+                                .char_limit(1)
+                                .desired_width(ui.available_width()/4.0));
                         });
                         ui.horizontal(|ui| {
                             ui.label("Path");
