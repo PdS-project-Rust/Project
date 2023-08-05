@@ -505,9 +505,11 @@ pub mod state_module{
                             }
                             if ui.button("Save").clicked() {
                                 let result=write_settings_to_file("settings.json".to_string(), &self.settings);
+                                if result.is_ok() {
+                                    self.settings_dialog=false;
+                                }
                                 self.drawing_mode=self.previous_drawing_mode;
                                 self.manage_errors(result);
-                                self.settings_dialog=false;
                             }
                         });
                     });
