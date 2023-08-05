@@ -6,8 +6,6 @@ mod state_module;
 use eframe::{NativeOptions, egui, IconData};
 use crate::state_module::state_module::take_screenshot;
 use crate::hotkey_module::hotkey_module::HotkeyManager;
-use std::fs::File;
-use std::io::{BufReader, Read};
 use std::path::PathBuf;
 use std::time::Duration;
 use global_hotkey::GlobalHotKeyEvent;

@@ -459,6 +459,7 @@ pub mod state_module{
             if self.saved_to_clipboard_dialog {
                 Window::new("Save Screenshot")
                     .collapsible(false)
+                    .title_bar(false)
                     .resizable(false)
                     .movable(false)
                     .show(ctx, |ui| {
@@ -553,7 +554,6 @@ pub mod state_module{
                         self.window_size=frame.info().window_info.size;
                         self.window_pos=frame.info().window_info.position.unwrap();
                         self.screenshot_taken=true;
-                        self.saved_to_clipboard_dialog = true;
 
                     }
 
@@ -597,6 +597,11 @@ pub mod state_module{
                         self.save_dialog=true;
                     }
 
+                    // save to clipboard button
+                    if ui.button("\u{1F4CB}").clicked() {
+                        self.saved_to_clipboard_dialog=true;
+                        self.screenshot.save_to_clipboard().unwrap();
+                    }
                     // settings button in the top right corner
                     ui.with_layout(Layout::top_down(Align::RIGHT), |ui| {
                         if ui.button("\u{2699}").clicked() {
@@ -932,7 +937,6 @@ pub mod state_module{
         //screenshot after delay
         let ss1=Screenshot::screenshot_after_delay(timer,screen).unwrap();
         //save image to clipboard
-        ss1.save_to_clipboard().unwrap();
         ss1
     }
 }
