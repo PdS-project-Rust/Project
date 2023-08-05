@@ -360,14 +360,15 @@ pub mod state_module{
                 self.instant += Duration::from_millis(16);
             }
         }
-
         pub fn check_minimization(&mut self, frame: &mut eframe::Frame) {
+            println!("position: {:?}",frame.info().window_info.position.unwrap());
+
             if self.screenshot_taken {
                 match self.screen_state {
                     0 => {
-                        frame.set_window_pos(Pos2::new(0.0,0.0));
+                        frame.set_window_pos(Pos2::new(-200.0,-200.0));
                         frame.set_window_size(Vec2::new(0.0,0.0));
-                        if frame.info().window_info.position.unwrap().x==0.0 && frame.info().window_info.position.unwrap().y==0.0 {
+                        if frame.info().window_info.position.unwrap().x==-200.0 && frame.info().window_info.position.unwrap().y==-200.0 {
                             self.screen_state=1;
                         }
                         
