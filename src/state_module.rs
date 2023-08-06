@@ -605,6 +605,7 @@ pub mod state_module{
                     // settings button in the top right corner
                     ui.with_layout(Layout::top_down(Align::RIGHT), |ui| {
                         if ui.button("\u{2699}").clicked() {
+                            self.settings=read_settings_from_file("settings.json".to_string()).unwrap();
                             self.previous_drawing_mode=self.drawing_mode;
                             self.drawing_mode=None;
                             self.settings_dialog=true;
