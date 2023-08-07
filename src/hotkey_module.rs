@@ -12,6 +12,12 @@ pub mod hotkey_module{
         Pen,
         Rubber,
     }
+
+    pub enum ActiveShortcuts{
+        ScreenshotDone,
+        ScreenshotWaiting,
+        Pause
+    }
     pub struct HotkeyManager{
         manager:GlobalHotKeyManager,
         quick_screenshot:Option<HotKey>,
@@ -149,16 +155,23 @@ pub mod hotkey_module{
                 }
             }
         }
-        pub fn set_drawing_shortcuts(&mut self,drawing_mode:Option<DrawingMode>)->Result<(),Box<dyn Error>>{
-            match drawing_mode {
-                Some(DrawingMode::Pause)=>{
+        pub fn set_active_shortcuts(&mut self,active_shortcuts:ActiveShortcuts)->Result<(),Box<dyn Error>>{
+            match active_shortcuts {
+                ActiveShortcuts::Pause=>{
                     self.disable_shortcut(KeyType::Save)?;
                     self.disable_shortcut(KeyType::Pen)?;
                     self.disable_shortcut(KeyType::Rubber)?;
                     self.disable_shortcut(KeyType::NewScreenshot)?;
                     self.disable_shortcut(KeyType::Quick)?;
                 },
-                _=>{
+                ActiveShortcuts::ScreenshotWaiting=>{
+                    self.disable_shortcut(KeyType::Rubber)?;
+                    self.disable_shortcut(KeyType::Pen)?;
+                    self.enable_shortcut(KeyType::Quick)?;
+                    self.enable_shortcut(KeyType::NewScreenshot)?;
+                    self.disable_shortcut(KeyType::Save)?;
+                },
+               ActiveShortcuts::ScreenshotDone=>{
                     self.enable_shortcut(KeyType::Rubber)?;
                     self.enable_shortcut(KeyType::Pen)?;
                     self.enable_shortcut(KeyType::Quick)?;
