@@ -34,7 +34,7 @@ pub mod settings_module {
         }
 
         pub fn get_new_screenshot_hotkey(&self) -> Result<Code,Box<dyn Error>> {
-            let code_str = format!("Key{}", self.newscreenshot);
+            let code_str = format!("Key{}", self.new_screenshot);
             Ok(Code::from_str(&code_str)?)
         }
 
@@ -85,7 +85,7 @@ pub mod settings_module {
 
         //check if hotkey is at least 1 character long
         if settings.quick.len()<1 ||
-           settings.newscreenshot.len()<1 ||
+           settings.new_screenshot.len()<1 ||
            settings.save.len()<1 ||
            settings.pen.len()<1 ||
            settings.rubber.len()<1

@@ -2,8 +2,6 @@ pub mod hotkey_module{
     use std::error::Error;
     use global_hotkey::GlobalHotKeyManager;
     use global_hotkey::hotkey::{Code, HotKey, Modifiers};
-    use thiserror::Error;
-    use crate::state_module::state_module::DrawingMode;
 
     pub enum KeyType{
         Quick,

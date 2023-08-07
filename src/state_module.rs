@@ -94,9 +94,9 @@ pub mod state_module{
             tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_screenshot.unwrap(),KeyType::NewScreenshot).unwrap();
             tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_quick.unwrap(),KeyType::Quick).unwrap();
             tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_pen.unwrap(),KeyType::Pen).unwrap();
-            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_rubber.unwrap(),KeyType::Rubber).unwrap(); 
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_rubber.unwrap(),KeyType::Rubber).unwrap();
             tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_save.unwrap(),KeyType::Save).unwrap();
-            
+
             Self {
                 timer:0,
                 screen:0,
@@ -472,6 +472,7 @@ pub mod state_module{
                         ui.horizontal(|ui| {
                             ui.label("Save as?");
                             if ui.button("PNG").clicked() {
+                                self.drawing_mode=self.previous_drawing_mode;
                                 self.format=ImageFormat::Png;
                                 //error handling
                                 let result= self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
@@ -479,12 +480,14 @@ pub mod state_module{
                                 self.save_dialog=false;
                             }
                             if ui.button("JPG").clicked() {
+                                self.drawing_mode=self.previous_drawing_mode;
                                 self.format=ImageFormat::Jpeg;
                                 let result=self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
                                 self.manage_errors(result);
                                 self.save_dialog=false;
                             }
                             if ui.button("GIF").clicked() {
+                                self.drawing_mode=self.previous_drawing_mode;
                                 self.format=ImageFormat::Gif;
                                 let result=self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
                                 self.manage_errors(result);
@@ -496,6 +499,7 @@ pub mod state_module{
                         //close
                         ui.horizontal(|ui| {
                             if ui.button("Cancel").clicked() {
+                                self.drawing_mode=self.previous_drawing_mode;
                                 self.save_dialog=false;
                             }
                         });
@@ -515,6 +519,7 @@ pub mod state_module{
                         };
                         if ui.button("Ok").clicked() {
                             self.saved_to_clipboard_dialog=false;
+                            self.drawing_mode=self.previous_drawing_mode;
                         }
                     });
             }
@@ -536,7 +541,7 @@ pub mod state_module{
                         ui.horizontal(|ui| {
                             ui.label("New Screenshot");
                             ui.label("CTRL + ");
-                            ui.add(TextEdit::singleline(&mut self.settings.newscreenshot)
+                            ui.add(TextEdit::singleline(&mut self.settings.new_screenshot)
                                 .char_limit(1)
                                 .desired_width(ui.available_width()/4.0));
                         });
@@ -575,38 +580,55 @@ pub mod state_module{
                             if ui.button("Save").clicked() {
                                 let result=write_settings_to_file("settings.json".to_string(), &self.settings);
                                if result.is_ok() {
+                                   self.drawing_mode=self.previous_drawing_mode;
                                    let startup_settings = read_settings_from_file("settings.json".to_string());
                                    let result=self.manage_errors(startup_settings);
                                    if result.is_none(){
+                                       self.drawing_mode=None;
                                        return;
                                    }
                                    let startup_settings=result.unwrap();
-                                   let key_open = startup_settings.get_open_hotkey();
-                                   let key_screenshot = startup_settings.get_screenshot_hotkey();
-                                   let result=self.manage_errors(key_open);
+                                   //KEY_NEW_SCREENSHOT
+                                   let key_new_screenshot=startup_settings.get_new_screenshot_hotkey();
+                                   let result=self.manage_errors(key_new_screenshot);
                                    if result.is_none(){
+                                       self.drawing_mode=None;
                                        return;
                                    }
-                                   let key_open=result.unwrap();
-                                   let result=self.manage_errors(key_screenshot);
+                                   let key_new_screenshot=result.unwrap();
+                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_new_screenshot,KeyType::NewScreenshot);
+                                   self.manage_errors(result);
+                                   //KEY_PEN
+                                   let key_pen=startup_settings.get_pen_hotkey();
+                                   let result=self.manage_errors(key_pen);
                                    if result.is_none(){
+                                       self.drawing_mode=None;
                                        return;
                                    }
-                                   let key_screenshot=result.unwrap();
-                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL), key_open,KeyType::Open); //OPEN APP
-                                   let result=self.manage_errors(result);
+                                   let key_pen=result.unwrap();
+                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_pen,KeyType::Pen);
+                                   self.manage_errors(result);
+                                   //KEY_RUBBER
+                                   let key_rubber=startup_settings.get_rubber_hotkey();
+                                   let result=self.manage_errors(key_rubber);
                                    if result.is_none(){
+                                       self.drawing_mode=None;
                                        return;
                                    }
-                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL), key_screenshot,KeyType::Quick); //OPEN APP
-                                   let result=self.manage_errors(result);
+                                   let key_rubber=result.unwrap();
+                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_rubber,KeyType::Rubber);
+                                   self.manage_errors(result);
+                                   //KEY_QUICK
+                                   let key_quick=startup_settings.get_quick_hotkey();
+                                   let result=self.manage_errors(key_quick);
                                    if result.is_none(){
+                                       self.drawing_mode=None;
                                        return;
                                    }
-                                   self.settings_dialog=false;
-                                   self.drawing_mode=self.previous_drawing_mode;
+                                   let key_quick=result.unwrap();
+                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_quick,KeyType::Rubber);
+                                   self.manage_errors(result);
                                }
-                                self.manage_errors(result);
                             }
                         });
                     });
@@ -647,7 +669,7 @@ pub mod state_module{
 
                 ui.horizontal(|ui| {
                     if ui.button("New Screenshot")
-                    .on_hover_text(format!("CTRL + {}", self.settings.newscreenshot))
+                    .on_hover_text(format!("CTRL + {}", self.settings.new_screenshot))
                     .clicked() {
                         self.window_size=frame.info().window_info.size;
                         self.window_pos=frame.info().window_info.position.unwrap();
@@ -694,11 +716,15 @@ pub mod state_module{
                     if ui.button("\u{1F4BE}")
                     .on_hover_text(format!("CTRL + {}", self.settings.save))
                     .clicked() {
+                        self.previous_drawing_mode=self.drawing_mode;
+                        self.drawing_mode=None;
                         self.save_dialog=true;
                     }
 
                     // save to clipboard button
                     if ui.button("\u{1F4CB}").clicked() {
+                        self.previous_drawing_mode=self.drawing_mode;
+                        self.drawing_mode=None;
                         self.saved_to_clipboard_dialog=true;
                         self.screenshot.save_to_clipboard().unwrap();
                     }
