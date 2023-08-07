@@ -38,48 +38,53 @@ pub mod hotkey_module{
         pub fn register_new_hotkey(&mut self, modifier:Option<Modifiers>,key:Code,key_type:KeyType)->Result<u32,Box<dyn Error>>{
             match key_type {
                 KeyType::Quick=>{
+                    let bool_now=self.quick_screenshot.1;
                     if self.quick_screenshot.0.is_some() && self.quick_screenshot.1 == true{
                         self.manager.unregister(self.quick_screenshot.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
                     self.manager.register(hk)?;
-                    self.quick_screenshot=(Some(hk),true);
+                    self.quick_screenshot=(Some(hk),bool_now);
                     Ok(hk.id())
                 },
                 KeyType::NewScreenshot=>{
+                    let bool_now=self.quick_screenshot.1;
                     if self.new_screenshot.0.is_some() && self.new_screenshot.1 == true {
                         self.manager.unregister(self.new_screenshot.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
                     self.manager.register(hk)?;
-                    self.new_screenshot=(Some(hk),true);
+                    self.new_screenshot=(Some(hk),bool_now);
                     Ok(hk.id())
                 },
                 KeyType::Save=>{
+                    let bool_now=self.quick_screenshot.1;
                     if self.save.0.is_some() && self.save.1 == true {
                         self.manager.unregister(self.save.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
                     self.manager.register(hk)?;
-                    self.save=(Some(hk),true);
+                    self.save=(Some(hk),bool_now);
                     Ok(hk.id())
                 },
                 KeyType::Pen=>{
+                    let bool_now=self.quick_screenshot.1;
                     if self.pen.0.is_some() && self.pen.1 == true {
                         self.manager.unregister(self.pen.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
                     self.manager.register(hk)?;
-                    self.pen=(Some(hk),true);
+                    self.pen=(Some(hk),bool_now);
                     Ok(hk.id())
                 },
                 KeyType::Rubber=>{
+                    let bool_now=self.quick_screenshot.1;
                     if self.rubber.0.is_some() && self.rubber.1 == true {
                         self.manager.unregister(self.rubber.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
                     self.manager.register(hk)?;
-                    self.rubber=(Some(hk),true);
+                    self.rubber=(Some(hk),bool_now);
                     Ok(hk.id())
                 },
             }
