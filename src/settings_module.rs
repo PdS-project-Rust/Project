@@ -8,7 +8,7 @@ pub mod settings_module {
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Settings {
         pub quick: String,
-        pub newscreenshot: String,
+        pub new_screenshot: String,
         pub save: String,
         pub pen: String,
         pub rubber: String,
@@ -18,7 +18,7 @@ pub mod settings_module {
         fn default() -> Settings {
             Settings {
                 quick: String::from("Q"),
-                newscreenshot: String::from("N"),
+                new_screenshot: String::from("N"),
                 save: String::from("S"),
                 pen: String::from("P"),
                 rubber: String::from("R"),
