@@ -7,7 +7,8 @@ pub mod screenshot_module{
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
     use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
-    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect_mut, draw_text_mut, draw_hollow_circle_mut};
+    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect_mut, draw_text_mut, draw_hollow_circle_mut, draw_polygon_mut};
+    use imageproc::point::Point;
     use imageproc::rect::Rect;
     use screenshots::Screen;
     use thiserror::Error;
@@ -288,6 +289,33 @@ pub mod screenshot_module{
             }
         }
 
+        pub fn arrow(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
+
+            let width = self.screenshot.width() as i32;
+            let height = self.screenshot.height() as i32;
+            let start = (starting_point.0 as i32, starting_point.1 as i32);
+            let end = (ending_point.0 as i32, ending_point.1 as i32);
+            let color_rgba = Rgba(color);
+            let half_size = (size / 2.0) as i32;
+
+            self.screenshot = self.intermediate_image.clone();
+
+            let direction = Point::new(end.0 - start.0, end.1 - start.1);
+            let length = ((direction.x * direction.x + direction.y * direction.y) as f32).sqrt();
+            let normalized_direction = Point::new((direction.x as f32 / length) as i32, (direction.y as f32 /length) as i32);
+            let arrow_width = size * 0.2;
+            let arrow_head = Point::new(end.0 - (normalized_direction.x as f32 * size) as i32, end.1 - (normalized_direction.y as f32 * size) as i32);
+
+            let mut points = Vec::new();
+            points.push(Point::new(start.0, start.1));
+            points.push(Point::new(start.0 + (normalized_direction.y as f32 * arrow_width) as i32, start.1 - (normalized_direction.x as f32 * arrow_width) as i32));
+            points.push(arrow_head);
+            points.push(Point::new(start.0 - (normalized_direction.y as f32 * arrow_width) as i32, start.1 + (normalized_direction.x as f32 * arrow_width) as i32));
+            /*
+            draw_polygon_mut(&mut self.screenshot, &points, color_rgba);
+            */
+
+        }
 
         pub fn draw_text(&mut self, text: &String, x: f32, y: f32, color: [u8; 3], scale:Scale) {
             // Load a font.

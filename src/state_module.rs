@@ -42,7 +42,8 @@ pub mod state_module{
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum Shape {
         Rectangle,
-        Circle
+        Circle,
+        Arrow
     }
 
     pub struct ScreenshotStr {
@@ -356,6 +357,51 @@ pub mod state_module{
                 }
             });
         }
+
+        pub fn draw_arrow(&mut self, ctx: &Context, available: Vec2, size: f32, color: [u8;4]) -> Option<((f32, f32), (f32, f32))> {
+            return ctx.input(|is| {
+                let pos = is.pointer.interact_pos();
+                if let Some(pos) = pos {
+                    let texture_coordinates = self.calculate_texture_coordinates(pos, available, ctx.used_size(),false);
+                    if let Some(texture_coordinates) = texture_coordinates {
+                        let x = texture_coordinates.x;
+                        let y = texture_coordinates.y;
+                        if is.pointer.any_down() {
+                            if self.starting_point.is_none() {
+                                self.starting_point = Some((x, y));
+                            } else {
+                                let start = (
+                                    self.starting_point.unwrap().0,
+                                    self.starting_point.unwrap().1,
+                                );
+                                let end = (x, y);
+                                self.screenshot.arrow(start, end, size, color);
+                                self.conversion();
+                                return None;
+                            }
+                        } else {
+                            if self.starting_point.is_some() {
+                                let start = (
+                                    self.starting_point.unwrap().0,
+                                    self.starting_point.unwrap().1,
+                                );
+                                let end = (x, y);
+                                self.screenshot.arrow(start, end, size, color);
+                                self.conversion();
+                                let tmp=self.starting_point.take().unwrap();
+                                self.screenshot.save_intermediate_image().unwrap();
+                                return Some((tmp,(x,y)));
+                            }
+                            return None;
+                        }
+                    } else {
+                        self.starting_point = None;
+                    }
+                }
+                return None;
+            });
+        }
+
         fn conversion(&mut self) {
             if Instant::now() > self.instant {
                 self._convert_image();
@@ -722,6 +768,7 @@ pub mod state_module{
                                                 ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                                 if ui.button("\u{25AD}").clicked() { self.shape=Some(Shape::Rectangle); }
                                                 if ui.button("\u{2B55}").clicked() { self.shape=Some(Shape::Circle); }
+                                                if ui.button("\u{2197}").clicked() { self.shape=Some(Shape::Arrow); }
                                                 if picker.clicked() {
                                                     self.previous_drawing_mode=Some(DrawingMode::Shape);
                                                     self.drawing_mode=Some(DrawingMode::Pause);
@@ -858,6 +905,9 @@ pub mod state_module{
                                         Some(Shape::Circle) => {
                                             self.draw_circle(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255]);
                                         },
+                                        Some(Shape::Arrow) => {
+                                            self.draw_arrow(ctx, available, self.tool_size, [self.tool_color[0],self.tool_color[1],self.tool_color[2], 255]);
+                                        }
                                         _ => {}
                                     }
                                 }
