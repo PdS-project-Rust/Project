@@ -22,6 +22,7 @@ fn build_gui() -> () {
     //APP CONF
     let options = NativeOptions {
         initial_window_size: Some(egui::vec2(640.0, 400.0)),
+        min_window_size: Some(egui::vec2(640.0, 400.0)),
         icon_data: Some(IconData{
             rgba: icon.into_raw(),
             width: icon_width,
