@@ -29,27 +29,27 @@ pub mod settings_module {
     impl Settings {
 
         pub fn get_quick_hotkey(&self) -> Result<Code,Box<dyn Error>> {
-            let code_str = format!("Key{}", self.quick);
+            let code_str = format!("Key{}", self.quick.to_uppercase());
             Ok(Code::from_str(&code_str)?)
         }
 
         pub fn get_new_screenshot_hotkey(&self) -> Result<Code,Box<dyn Error>> {
-            let code_str = format!("Key{}", self.new_screenshot);
+            let code_str = format!("Key{}", self.new_screenshot.to_uppercase());
             Ok(Code::from_str(&code_str)?)
         }
 
         pub fn get_save_hotkey(&self) -> Result<Code,Box<dyn Error>> {
-            let code_str = format!("Key{}", self.save);
+            let code_str = format!("Key{}", self.save.to_uppercase());
             Ok(Code::from_str(&code_str)?)
         }
 
         pub fn get_pen_hotkey(&self) -> Result<Code,Box<dyn Error>> {
-            let code_str = format!("Key{}", self.pen);
+            let code_str = format!("Key{}", self.pen.to_uppercase());
             Ok(Code::from_str(&code_str)?)
         }
 
         pub fn get_rubber_hotkey(&self) -> Result<Code,Box<dyn Error>> {
-            let code_str = format!("Key{}", self.rubber);
+            let code_str = format!("Key{}", self.rubber.to_uppercase());
             Ok(Code::from_str(&code_str)?)
         }
 
@@ -83,6 +83,7 @@ pub mod settings_module {
             return Err("Path does not exist".to_string().into());
         }
 
+        
         //check if hotkey is at least 1 character long
         if settings.quick.len()<1 ||
            settings.new_screenshot.len()<1 ||
@@ -92,6 +93,7 @@ pub mod settings_module {
            {
             let sett=Settings::default();
             serde_json::to_writer(writer, &sett)?;
+
             Err("Hotkey must be at least 1 character long".to_string().into())
         } else {
             serde_json::to_writer(writer, settings)?;
