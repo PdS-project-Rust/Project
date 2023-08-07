@@ -28,11 +28,11 @@ pub mod hotkey_module{
         pub fn new()->Result<Self,Box<dyn Error>>{
             Ok(HotkeyManager{
                 manager:GlobalHotKeyManager::new()?,
-                quick_screenshot:(None,false),
-                new_screenshot:(None,false),
-                save:(None,false),
-                pen:(None,false),
-                rubber:(None,false),
+                quick_screenshot:(None,true),
+                new_screenshot:(None,true),
+                save:(None,true),
+                pen:(None,true),
+                rubber:(None,true),
             })
         }
         pub fn register_new_hotkey(&mut self, modifier:Option<Modifiers>,key:Code,key_type:KeyType)->Result<u32,Box<dyn Error>>{
@@ -43,8 +43,12 @@ pub mod hotkey_module{
                         self.manager.unregister(self.quick_screenshot.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
-                    self.manager.register(hk)?;
-                    self.quick_screenshot=(Some(hk),bool_now);
+                    if bool_now {
+                        self.manager.register(hk)?;
+                        self.quick_screenshot = (Some(hk),true);
+                    }else{
+                        self.quick_screenshot = (Some(hk),false);
+                    }
                     Ok(hk.id())
                 },
                 KeyType::NewScreenshot=>{
@@ -53,8 +57,12 @@ pub mod hotkey_module{
                         self.manager.unregister(self.new_screenshot.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
-                    self.manager.register(hk)?;
-                    self.new_screenshot=(Some(hk),bool_now);
+                    if bool_now {
+                        self.manager.register(hk)?;
+                        self.new_screenshot = (Some(hk),true);
+                    }else{
+                        self.new_screenshot = (Some(hk),false);
+                    }
                     Ok(hk.id())
                 },
                 KeyType::Save=>{
@@ -63,8 +71,12 @@ pub mod hotkey_module{
                         self.manager.unregister(self.save.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
-                    self.manager.register(hk)?;
-                    self.save=(Some(hk),bool_now);
+                    if bool_now {
+                        self.manager.register(hk)?;
+                        self.save = (Some(hk),true);
+                    }else{
+                        self.save = (Some(hk),false);
+                    }
                     Ok(hk.id())
                 },
                 KeyType::Pen=>{
@@ -73,8 +85,12 @@ pub mod hotkey_module{
                         self.manager.unregister(self.pen.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
-                    self.manager.register(hk)?;
-                    self.pen=(Some(hk),bool_now);
+                    if bool_now {
+                        self.manager.register(hk)?;
+                        self.pen = (Some(hk),true);
+                    }else{
+                        self.pen = (Some(hk),false);
+                    }
                     Ok(hk.id())
                 },
                 KeyType::Rubber=>{
@@ -83,8 +99,12 @@ pub mod hotkey_module{
                         self.manager.unregister(self.rubber.0.unwrap())?;
                     }
                     let hk=HotKey::new(modifier,key);
-                    self.manager.register(hk)?;
-                    self.rubber=(Some(hk),bool_now);
+                    if bool_now {
+                        self.manager.register(hk)?;
+                        self.rubber = (Some(hk),true);
+                    }else{
+                        self.rubber = (Some(hk),false);
+                    }
                     Ok(hk.id())
                 },
             }
