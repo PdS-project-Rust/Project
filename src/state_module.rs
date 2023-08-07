@@ -85,10 +85,18 @@ pub mod state_module{
         fn default() -> Self {
             let mut tmp =HotkeyManager::new().unwrap();
             let startup_settings = read_settings_from_file("settings.json".to_string()).unwrap();
-            let key_open = startup_settings.get_open_hotkey();
-            let key_screenshot = startup_settings.get_screenshot_hotkey();
-            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_open.unwrap(),KeyType::NewScreenshot).unwrap(); //OPEN APP
-            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_screenshot.unwrap(),KeyType::Quick).unwrap(); //OPEN APP
+            let key_quick = startup_settings.get_quick_hotkey();
+            let key_screenshot = startup_settings.get_new_screenshot_hotkey();
+            let key_pen = startup_settings.get_pen_hotkey();
+            let key_rubber = startup_settings.get_rubber_hotkey();
+            let key_save = startup_settings.get_save_hotkey();
+
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_screenshot.unwrap(),KeyType::NewScreenshot).unwrap();
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_quick.unwrap(),KeyType::Quick).unwrap();
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_pen.unwrap(),KeyType::Pen).unwrap();
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_rubber.unwrap(),KeyType::Rubber).unwrap(); 
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_save.unwrap(),KeyType::Save).unwrap();
+            
             Self {
                 timer:0,
                 screen:0,
@@ -426,11 +434,7 @@ pub mod state_module{
         fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
             //shortcuts
             if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv() {
-                if self.hotkey_manager.get_key_open().is_some() && self.hotkey_manager.get_key_open().unwrap()==event.id{
-                    //TODO
-                    println!("open");
-                }
-                if self.hotkey_manager.get_key_quick().is_some() && self.hotkey_manager.get_key_quick().unwrap()==event.id {
+                if self.hotkey_manager.get_key(KeyType::Quick).is_some() && self.hotkey_manager.get_key(KeyType::Quick).unwrap()==event.id {
                     println!("Screenshot taken");
                     let startup_settings = read_settings_from_file("settings.json".to_string());
                     let startup_settings=self.manage_errors(startup_settings);
@@ -439,6 +443,23 @@ pub mod state_module{
                         let result=ss.save_image(&PathBuf::from(startup_settings.unwrap().path), ImageFormat::Png);
                         self.manage_errors(result);
                     }
+                }
+                if self.hotkey_manager.get_key(KeyType::NewScreenshot).is_some() && self.hotkey_manager.get_key(KeyType::NewScreenshot).unwrap()==event.id {
+                    self.screenshot = take_screenshot(Duration::from_secs(self.timer as u64), self.screen);
+                    self._convert_image();
+                    self.show_image = true;
+                    self.screenshot_taken = true;
+                }
+                if self.hotkey_manager.get_key(KeyType::Save).is_some() && self.hotkey_manager.get_key(KeyType::Save).unwrap()==event.id {
+                    self.save_dialog = true;
+                    self.previous_drawing_mode=self.drawing_mode;
+                    self.drawing_mode=None;
+                }
+                if self.hotkey_manager.get_key(KeyType::Pen).is_some() && self.hotkey_manager.get_key(KeyType::Pen).unwrap()==event.id {
+                    self.drawing_mode = Some(DrawingMode::Paint);
+                }
+                if self.hotkey_manager.get_key(KeyType::Rubber).is_some() && self.hotkey_manager.get_key(KeyType::Rubber).unwrap()==event.id {
+                    self.drawing_mode = Some(DrawingMode::Erase);
                 }
             }
             // save dialog
@@ -506,16 +527,37 @@ pub mod state_module{
                     .show(ctx, |ui| {
                         ui.label("Change Hotkeys");
                         ui.horizontal(|ui| {
-                            ui.label("Open App");
+                            ui.label("Quick Screenshot");
                             ui.label("CTRL + ");
-                            ui.add(TextEdit::singleline(&mut self.settings.open)
+                            ui.add(TextEdit::singleline(&mut self.settings.quick)
                                 .char_limit(1)
                                 .desired_width(ui.available_width()/4.0));
                         });
                         ui.horizontal(|ui| {
-                            ui.label("Quick Screenshot");
+                            ui.label("New Screenshot");
                             ui.label("CTRL + ");
-                            ui.add(TextEdit::singleline(&mut self.settings.quick)
+                            ui.add(TextEdit::singleline(&mut self.settings.newscreenshot)
+                                .char_limit(1)
+                                .desired_width(ui.available_width()/4.0));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Save Screenshot");
+                            ui.label("CTRL + ");
+                            ui.add(TextEdit::singleline(&mut self.settings.save)
+                                .char_limit(1)
+                                .desired_width(ui.available_width()/4.0));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Pen tool");
+                            ui.label("CTRL + ");
+                            ui.add(TextEdit::singleline(&mut self.settings.pen)
+                                .char_limit(1)
+                                .desired_width(ui.available_width()/4.0));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Rubber tool");
+                            ui.label("CTRL + ");
+                            ui.add(TextEdit::singleline(&mut self.settings.rubber)
                                 .char_limit(1)
                                 .desired_width(ui.available_width()/4.0));
                         });
@@ -604,7 +646,9 @@ pub mod state_module{
                 self.check_minimization(frame);
 
                 ui.horizontal(|ui| {
-                    if ui.button("New Screenshot").clicked() {
+                    if ui.button("New Screenshot")
+                    .on_hover_text(format!("CTRL + {}", self.settings.newscreenshot))
+                    .clicked() {
                         self.window_size=frame.info().window_info.size;
                         self.window_pos=frame.info().window_info.position.unwrap();
                         self.screenshot_taken=true;
@@ -647,7 +691,9 @@ pub mod state_module{
                     ui.separator();
 
                     // save button
-                    if ui.button("\u{1F4BE}").clicked() {
+                    if ui.button("\u{1F4BE}")
+                    .on_hover_text(format!("CTRL + {}", self.settings.save))
+                    .clicked() {
                         self.save_dialog=true;
                     }
 
@@ -714,7 +760,9 @@ pub mod state_module{
                             }
 
                             // draw
-                            if ui.button("\u{270F}").clicked() {
+                            if ui.button("\u{270F}")
+                            .on_hover_text(format!("CTRL + {}", self.settings.pen))
+                            .clicked() {
                                 self.text_edit_dialog=false;
                                 self.toggle_drawing_mode(DrawingMode::Paint);
                             }
@@ -726,7 +774,9 @@ pub mod state_module{
                             }
 
                             // erase
-                            if ui.button("\u{1F4D8}").clicked() {
+                            if ui.button("\u{1F4D8}")
+                            .on_hover_text(format!("CTRL + {}", self.settings.rubber))
+                            .clicked() {
                                 self.text_edit_dialog=false;
                                 self.toggle_drawing_mode(DrawingMode::Erase);
                             }
