@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - egui_0_22_0
+      - egui_0_22_0_update_shortcuts
 env:
   CARGO_TERM_COLOR: always
 jobs:

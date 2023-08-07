@@ -52,5 +52,18 @@ pub mod hotkey_module{
             self.open_key.take();
             Ok(())
         }
+
+        pub fn get_key_open(&self)->Option<u32>{
+            if self.open_key.is_some(){
+                return Some(self.open_key.unwrap().id())
+            }
+            None
+        }
+        pub fn get_key_quick(&self)->Option<u32>{
+            if self.quick_key.is_some(){
+                return Some(self.quick_key.unwrap().id())
+            }
+            None
+        }
     }
 }

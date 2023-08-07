@@ -11,7 +11,10 @@ pub mod state_module{
     use std::{cmp, path::PathBuf};
     use eframe::egui::{Color32, Frame, Rect, Slider};
     use eframe::epaint::Stroke;
+    use global_hotkey::GlobalHotKeyEvent;
+    use global_hotkey::hotkey::Modifiers;
     use rusttype::Scale;
+    use crate::hotkey_module::hotkey_module::{HotkeyManager, KeyType};
 
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -75,10 +78,17 @@ pub mod state_module{
         pub window_size:Vec2,
         pub crop_screenshot_tmp:Screenshot,
         pub saved_to_clipboard_dialog: bool,
+        pub hotkey_manager: HotkeyManager,
     }
 
     impl Default for ScreenshotStr {
         fn default() -> Self {
+            let mut tmp =HotkeyManager::new().unwrap();
+            let startup_settings = read_settings_from_file("settings.json".to_string()).unwrap();
+            let key_open = startup_settings.get_open_hotkey();
+            let key_screenshot = startup_settings.get_screenshot_hotkey();
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_open.unwrap(),KeyType::Open).unwrap(); //OPEN APP
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_screenshot.unwrap(),KeyType::Quick).unwrap(); //OPEN APP
             Self {
                 timer:0,
                 screen:0,
@@ -109,6 +119,7 @@ pub mod state_module{
                 window_size:Vec2::new(0.0,0.0),
                 crop_screenshot_tmp:Screenshot::new_empty(),
                 saved_to_clipboard_dialog: false,
+                hotkey_manager:tmp,
             }
         }
     }
@@ -363,8 +374,6 @@ pub mod state_module{
             }
         }
         pub fn check_minimization(&mut self, frame: &mut eframe::Frame) {
-            println!("position: {:?}",frame.info().window_info.position.unwrap());
-
             if self.screenshot_taken {
                 match self.screen_state {
                     0 => {
@@ -415,6 +424,23 @@ pub mod state_module{
 
     impl App for ScreenshotStr {
         fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+            //shortcuts
+            if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv() {
+                if self.hotkey_manager.get_key_open().is_some() && self.hotkey_manager.get_key_open().unwrap()==event.id{
+                    //TODO
+                    println!("open");
+                }
+                if self.hotkey_manager.get_key_quick().is_some() && self.hotkey_manager.get_key_quick().unwrap()==event.id {
+                    println!("Screenshot taken");
+                    let startup_settings = read_settings_from_file("settings.json".to_string());
+                    let startup_settings=self.manage_errors(startup_settings);
+                    if startup_settings.is_some() {
+                        let ss = take_screenshot(Duration::from_secs(0), 0);
+                        let result=ss.save_image(&PathBuf::from(startup_settings.unwrap().path), ImageFormat::Png);
+                        self.manage_errors(result);
+                    }
+                }
+            }
             // save dialog
             if self.save_dialog {
                 Window::new("Save Screenshot")
@@ -506,10 +532,38 @@ pub mod state_module{
                             }
                             if ui.button("Save").clicked() {
                                 let result=write_settings_to_file("settings.json".to_string(), &self.settings);
-                                if result.is_ok() {
-                                    self.settings_dialog=false;
-                                }
-                                self.drawing_mode=self.previous_drawing_mode;
+                               if result.is_ok() {
+                                   let startup_settings = read_settings_from_file("settings.json".to_string());
+                                   let result=self.manage_errors(startup_settings);
+                                   if result.is_none(){
+                                       return;
+                                   }
+                                   let startup_settings=result.unwrap();
+                                   let key_open = startup_settings.get_open_hotkey();
+                                   let key_screenshot = startup_settings.get_screenshot_hotkey();
+                                   let result=self.manage_errors(key_open);
+                                   if result.is_none(){
+                                       return;
+                                   }
+                                   let key_open=result.unwrap();
+                                   let result=self.manage_errors(key_screenshot);
+                                   if result.is_none(){
+                                       return;
+                                   }
+                                   let key_screenshot=result.unwrap();
+                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL), key_open,KeyType::Open); //OPEN APP
+                                   let result=self.manage_errors(result);
+                                   if result.is_none(){
+                                       return;
+                                   }
+                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL), key_screenshot,KeyType::Quick); //OPEN APP
+                                   let result=self.manage_errors(result);
+                                   if result.is_none(){
+                                       return;
+                                   }
+                                   self.settings_dialog=false;
+                                   self.drawing_mode=self.previous_drawing_mode;
+                               }
                                 self.manage_errors(result);
                             }
                         });
