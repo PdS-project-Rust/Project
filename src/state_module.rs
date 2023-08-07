@@ -60,6 +60,7 @@ pub mod state_module{
         pub save_dialog:bool,
         pub drawing_mode:Option<DrawingMode>,
         pub previous_drawing_mode:Option<DrawingMode>,
+        pub previous_drawing_mode_error:Option<DrawingMode>,
         pub text_edit_dialog: bool,
         pub text_edit_dialog_position: Pos2,
         pub text: String,
@@ -109,6 +110,7 @@ pub mod state_module{
                 save_dialog:false,
                 drawing_mode:None,
                 previous_drawing_mode:Some(DrawingMode::Pause),
+                previous_drawing_mode_error:Some(DrawingMode::Pause),
                 text_edit_dialog: false,
                 text_edit_dialog_position: Pos2::new(0.0,0.0),
                 text: String::new(),
@@ -419,7 +421,7 @@ pub mod state_module{
             match result {
                 Ok(E)=>Some(E),
                 Err(e)=> {
-                    self.previous_drawing_mode=self.drawing_mode;
+                    self.previous_drawing_mode_error=self.drawing_mode;
                     self.drawing_mode=None;
                     self.error_message = e.to_string();
                     self.error_dialog=true;
@@ -434,6 +436,7 @@ pub mod state_module{
         fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
             //shortcuts
             if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv() {
+                //KEY_QUICK
                 if self.hotkey_manager.get_key(KeyType::Quick).is_some() && self.hotkey_manager.get_key(KeyType::Quick).unwrap()==event.id {
                     println!("Screenshot taken");
                     let startup_settings = read_settings_from_file("settings.json".to_string());
@@ -444,56 +447,73 @@ pub mod state_module{
                         self.manage_errors(result);
                     }
                 }
+                //KEY_SCREENSHOT
                 if self.hotkey_manager.get_key(KeyType::NewScreenshot).is_some() && self.hotkey_manager.get_key(KeyType::NewScreenshot).unwrap()==event.id {
                     self.screenshot = take_screenshot(Duration::from_secs(self.timer as u64), self.screen);
                     self._convert_image();
                     self.show_image = true;
                     self.screenshot_taken = true;
                 }
+                //KEY_SAVE
                 if self.hotkey_manager.get_key(KeyType::Save).is_some() && self.hotkey_manager.get_key(KeyType::Save).unwrap()==event.id {
+                    if !self.saved_to_clipboard_dialog && !self.text_edit_dialog && !self.settings_dialog && !self.save_dialog{
+                        self.previous_drawing_mode=self.drawing_mode;
+                        self.drawing_mode=None;
+                    }
+                    self.saved_to_clipboard_dialog=false;
+                    self.text_edit_dialog=false;
+                    self.settings_dialog=false;
                     self.save_dialog = true;
-                    self.previous_drawing_mode=self.drawing_mode;
-                    self.drawing_mode=None;
                 }
+                //KEY_PEN
                 if self.hotkey_manager.get_key(KeyType::Pen).is_some() && self.hotkey_manager.get_key(KeyType::Pen).unwrap()==event.id {
                     self.drawing_mode = Some(DrawingMode::Paint);
                 }
+                //KEY_RUBBER
                 if self.hotkey_manager.get_key(KeyType::Rubber).is_some() && self.hotkey_manager.get_key(KeyType::Rubber).unwrap()==event.id {
                     self.drawing_mode = Some(DrawingMode::Erase);
                 }
             }
-            // save dialog
+            // SAVE_DIALOG
             if self.save_dialog {
                 Window::new("Save Screenshot")
                     .collapsible(false)
                     .resizable(false)
                     .show(ctx, |ui| {
+
+                        ui.set_enabled(!self.error_dialog);
+
                         //close button
                         ui.horizontal(|ui| {
                             ui.label("Save as?");
                             if ui.button("PNG").clicked() {
-                                self.drawing_mode=self.previous_drawing_mode;
                                 self.format=ImageFormat::Png;
                                 //error handling
                                 let result= self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
-                                self.manage_errors(result);
+                                if self.manage_errors(result).is_none(){
+                                    return;
+                                }
                                 self.save_dialog=false;
+                                self.drawing_mode=self.previous_drawing_mode;
                             }
                             if ui.button("JPG").clicked() {
-                                self.drawing_mode=self.previous_drawing_mode;
                                 self.format=ImageFormat::Jpeg;
                                 let result=self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
-                                self.manage_errors(result);
+                                if self.manage_errors(result).is_none(){
+                                    return;
+                                }
                                 self.save_dialog=false;
+                                self.drawing_mode=self.previous_drawing_mode;
                             }
                             if ui.button("GIF").clicked() {
-                                self.drawing_mode=self.previous_drawing_mode;
                                 self.format=ImageFormat::Gif;
                                 let result=self.screenshot.save_image(&PathBuf::from(&self.settings.path), self.format);
-                                self.manage_errors(result);
+                                if self.manage_errors(result).is_none(){
+                                    return;
+                                }
                                 self.save_dialog=false;
+                                self.drawing_mode=self.previous_drawing_mode;
                             }
-
                         });
 
                         //close
@@ -505,8 +525,8 @@ pub mod state_module{
                         });
                     });
             }
-     
-            //save to clipboard dialog
+
+
             if self.saved_to_clipboard_dialog {
                 Window::new("Save Screenshot")
                     .collapsible(false)
@@ -514,6 +534,9 @@ pub mod state_module{
                     .resizable(false)
                     .movable(false)
                     .show(ctx, |ui| {
+
+                        ui.set_enabled(!self.error_dialog);
+
                         if ui.label("Saved to clipboard!").clicked_elsewhere() {
                             self.saved_to_clipboard_dialog=false;
                         };
@@ -524,12 +547,15 @@ pub mod state_module{
                     });
             }
      
-            // settings dialog
+            // SETTING_DIALOG
             if self.settings_dialog {
                 Window::new("Settings")
                     .collapsible(false)
                     .resizable(false)
                     .show(ctx, |ui| {
+
+                        ui.set_enabled(!self.error_dialog);
+
                         ui.label("Change Hotkeys");
                         ui.horizontal(|ui| {
                             ui.label("Quick Screenshot");
@@ -579,58 +605,61 @@ pub mod state_module{
                             }
                             if ui.button("Save").clicked() {
                                 let result=write_settings_to_file("settings.json".to_string(), &self.settings);
-                               if result.is_ok() {
-                                   self.drawing_mode=self.previous_drawing_mode;
-                                   let startup_settings = read_settings_from_file("settings.json".to_string());
-                                   let result=self.manage_errors(startup_settings);
-                                   if result.is_none(){
-                                       self.drawing_mode=None;
-                                       return;
-                                   }
-                                   let startup_settings=result.unwrap();
-                                   //KEY_NEW_SCREENSHOT
-                                   let key_new_screenshot=startup_settings.get_new_screenshot_hotkey();
-                                   let result=self.manage_errors(key_new_screenshot);
-                                   if result.is_none(){
-                                       self.drawing_mode=None;
-                                       return;
-                                   }
-                                   let key_new_screenshot=result.unwrap();
-                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_new_screenshot,KeyType::NewScreenshot);
-                                   self.manage_errors(result);
-                                   //KEY_PEN
-                                   let key_pen=startup_settings.get_pen_hotkey();
-                                   let result=self.manage_errors(key_pen);
-                                   if result.is_none(){
-                                       self.drawing_mode=None;
-                                       return;
-                                   }
-                                   let key_pen=result.unwrap();
-                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_pen,KeyType::Pen);
-                                   self.manage_errors(result);
-                                   //KEY_RUBBER
-                                   let key_rubber=startup_settings.get_rubber_hotkey();
-                                   let result=self.manage_errors(key_rubber);
-                                   if result.is_none(){
-                                       self.drawing_mode=None;
-                                       return;
-                                   }
-                                   let key_rubber=result.unwrap();
-                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_rubber,KeyType::Rubber);
-                                   self.manage_errors(result);
-                                   //KEY_QUICK
-                                   let key_quick=startup_settings.get_quick_hotkey();
-                                   let result=self.manage_errors(key_quick);
-                                   if result.is_none(){
-                                       self.drawing_mode=None;
-                                       return;
-                                   }
-                                   let key_quick=result.unwrap();
-                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_quick,KeyType::Quick);
-                                   self.manage_errors(result);
-
-                                   self.settings_dialog=false;
+                                if self.manage_errors(result).is_none(){
+                                    return;
+                                }
+                               let startup_settings = read_settings_from_file("settings.json".to_string());
+                               let result=self.manage_errors(startup_settings);
+                               if result.is_none(){
+                                   return;
                                }
+                               let startup_settings=result.unwrap();
+                               //KEY_NEW_SCREENSHOT
+                               let key_new_screenshot=startup_settings.get_new_screenshot_hotkey();
+                               let result=self.manage_errors(key_new_screenshot);
+                               if result.is_none(){
+                                   return;
+                               }
+                               let key_new_screenshot=result.unwrap();
+                               let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_new_screenshot,KeyType::NewScreenshot);
+                               if self.manage_errors(result).is_none(){
+                                   return;
+                               }
+                               //KEY_PEN
+                               let key_pen=startup_settings.get_pen_hotkey();
+                               let result=self.manage_errors(key_pen);
+                               if result.is_none(){
+                                   return;
+                               }
+                               let key_pen=result.unwrap();
+                               let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_pen,KeyType::Pen);
+                               if self.manage_errors(result).is_none(){
+                                   return;
+                               }
+                               //KEY_RUBBER
+                               let key_rubber=startup_settings.get_rubber_hotkey();
+                               let result=self.manage_errors(key_rubber);
+                               if result.is_none(){
+                                   return;
+                               }
+                               let key_rubber=result.unwrap();
+                               let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_rubber,KeyType::Rubber);
+                               if self.manage_errors(result).is_none(){
+                                   return;
+                               }
+                               //KEY_QUICK
+                               let key_quick=startup_settings.get_quick_hotkey();
+                               let result=self.manage_errors(key_quick);
+                               if result.is_none(){
+                                   return;
+                               }
+                               let key_quick=result.unwrap();
+                               let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_quick,KeyType::Quick);
+                               if self.manage_errors(result).is_none(){
+                                   return;
+                               }
+                               self.drawing_mode=self.previous_drawing_mode;
+                               self.settings_dialog=false;
                             }
                         });
                     });
@@ -645,7 +674,7 @@ pub mod state_module{
                         ui.label(format!("Error: {}", self.error_message));
                         ui.horizontal(|ui| {
                             if ui.button("Ok").clicked() {
-                                self.drawing_mode=self.previous_drawing_mode;
+                                self.drawing_mode=self.previous_drawing_mode_error;
                                 self.error_dialog=false;
                             }
                         });
@@ -660,6 +689,9 @@ pub mod state_module{
                     fill: ctx.style().visuals.panel_fill,
                     ..Default::default()
                 }).show(ctx, |ui| {
+
+                ui.set_enabled(!self.error_dialog);
+
                 let timer = self.timer;
                 let screen = self.screen;
 
@@ -668,7 +700,6 @@ pub mod state_module{
                 self.upper_panel_size=ui.available_size();
 
                 self.check_minimization(frame);
-
                 ui.horizontal(|ui| {
                     if ui.button("New Screenshot")
                     .on_hover_text(format!("CTRL + {}", self.settings.new_screenshot))
@@ -676,7 +707,6 @@ pub mod state_module{
                         self.window_size=frame.info().window_info.size;
                         self.window_pos=frame.info().window_info.position.unwrap();
                         self.screenshot_taken=true;
-
                     }
 
                     ui.separator();
@@ -718,24 +748,49 @@ pub mod state_module{
                     if ui.button("\u{1F4BE}")
                     .on_hover_text(format!("CTRL + {}", self.settings.save))
                     .clicked() {
-                        self.previous_drawing_mode=self.drawing_mode;
-                        self.drawing_mode=None;
+                        if !self.saved_to_clipboard_dialog && !self.text_edit_dialog && !self.settings_dialog && !self.save_dialog{
+                            self.previous_drawing_mode=self.drawing_mode;
+                            self.drawing_mode=None;
+                        }
+                        self.settings_dialog=false;
+                        self.saved_to_clipboard_dialog=false;
+                        self.text_edit_dialog=false;
                         self.save_dialog=true;
                     }
 
                     // save to clipboard button
                     if ui.button("\u{1F4CB}").clicked() {
-                        self.previous_drawing_mode=self.drawing_mode;
-                        self.drawing_mode=None;
+                        let flag=!self.saved_to_clipboard_dialog && !self.text_edit_dialog && !self.settings_dialog && !self.save_dialog;
+                        self.settings_dialog=false;
+                        self.save_dialog=false;
+                        self.text_edit_dialog=false;
+                        let result=self.screenshot.save_to_clipboard();
+                        if self.manage_errors(result).is_none() {
+                            return;
+                        }
+                        if flag {
+                            self.previous_drawing_mode=self.drawing_mode;
+                            self.drawing_mode=None;
+                        }
                         self.saved_to_clipboard_dialog=true;
-                        self.screenshot.save_to_clipboard().unwrap();
                     }
                     // settings button in the top right corner
                     ui.with_layout(Layout::top_down(Align::RIGHT), |ui| {
                         if ui.button("\u{2699}").clicked() {
-                            self.settings=read_settings_from_file("settings.json".to_string()).unwrap();
-                            self.previous_drawing_mode=self.drawing_mode;
-                            self.drawing_mode=None;
+                            let flag=!self.saved_to_clipboard_dialog && !self.text_edit_dialog && !self.settings_dialog && !self.save_dialog;
+                            self.saved_to_clipboard_dialog=false;
+                            self.save_dialog=false;
+                            self.text_edit_dialog=false;
+                            let result=read_settings_from_file("settings.json".to_string());
+                            let result=self.manage_errors(result);
+                            if result.is_none() {
+                                return;
+                            }
+                            self.settings=result.unwrap();
+                            if flag {
+                                self.previous_drawing_mode=self.drawing_mode;
+                                self.drawing_mode=None;
+                            }
                             self.settings_dialog=true;
                         }
                     });
@@ -756,6 +811,9 @@ pub mod state_module{
                 )
                 .resizable(false)
                 .show(ctx, |ui| {
+
+                    ui.set_enabled(!self.error_dialog);
+
                     if self.show_image {
                         ui.horizontal(|ui| {
                             // rotate left
@@ -763,7 +821,9 @@ pub mod state_module{
                                 self.drawing_mode=None;
                                 self.text_edit_dialog=false;
                                 let result=self.screenshot.rotate_sx_90();
-                                self.manage_errors(result);
+                                if self.manage_errors(result).is_none(){
+                                    return;
+                                }
                                 self._convert_image();
                                 self.show_image=true;
                             }
@@ -773,7 +833,9 @@ pub mod state_module{
                                 self.drawing_mode=None;
                                 self.text_edit_dialog=false;
                                 let result=self.screenshot.rotate_dx_90();
-                                self.manage_errors(result);
+                                if self.manage_errors(result).is_none(){
+                                    return;
+                                }
                                 self._convert_image();
                                 self.show_image=true;
                             }
@@ -781,10 +843,12 @@ pub mod state_module{
                             // crop
                             if ui.button("\u{2702}").clicked() {
                                 self.text_edit_dialog=false;
-                                self.toggle_drawing_mode(DrawingMode::Crop);
                                 let result=self.screenshot.save_intermediate_image();
+                                if self.manage_errors(result).is_none(){
+                                    return;
+                                }
+                                self.toggle_drawing_mode(DrawingMode::Crop);
                                 self.crop_screenshot_tmp=self.screenshot.clone();
-                                self.manage_errors(result);
                             }
 
                             // draw
@@ -812,9 +876,11 @@ pub mod state_module{
                             // shapes
                             if ui.button("\u{2B1F}").clicked() {
                                 self.text_edit_dialog=false;
-                                self.toggle_drawing_mode(DrawingMode::Shape);
                                 let result=self.screenshot.save_intermediate_image();
-                                self.manage_errors(result);
+                                if self.manage_errors(result).is_none(){
+                                    return;
+                                }
+                                self.toggle_drawing_mode(DrawingMode::Shape);
                             }
 
                             // text
@@ -828,6 +894,8 @@ pub mod state_module{
                                 ui.label(self.drawing_mode.unwrap().to_string());
                             }
 
+
+                            //GIVEN A DRAWING_MODE SHOWS DIFFERENT THINGS ON THE RIGHT BOTTOM SIDE
                             if self.drawing_mode.is_some() {
                                 // Color Picker, Size Picker for Brush, Highlight, Erase, Shapes, Text
                                 ui.with_layout(Layout::right_to_left(Align::RIGHT), |ui| {
@@ -872,7 +940,7 @@ pub mod state_module{
                                             _ => {}
                                         }
                                     }else{
-                                        //without color picker
+                                        //without color picker (Crop,Erase,None)
                                         match self.drawing_mode {
                                             Some(DrawingMode::Erase) => {
                                                 ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
@@ -889,13 +957,19 @@ pub mod state_module{
 
                     }
                 });
-                
+
+
+            //GIVEN A DRAWING MODE EXECUTES THE FUNCTION
             CentralPanel::default()
                 .frame(Frame::none())
                 .show(ctx, |ui| {
+
+                    ui.set_enabled(!self.error_dialog);
+
                     ui.with_layout(Layout::centered_and_justified(Direction::TopDown), |ui| {
                         let values_window=self.calculate_rect_image(ui.available_size(),ctx.used_size());
-                        // text edit window
+
+                        // TEXT EDIT DIALOG
                         if self.text_edit_dialog {
                             //text edit window without titlebar
                             println!("coordinate: {:?}",self.text_edit_dialog_position);
@@ -919,7 +993,7 @@ pub mod state_module{
                                             .text_color(Color32::from_rgb(self.tool_color[0], self.tool_color[1], self.tool_color[2]))
                                             .frame(false)
                                     );
-                                    self.text_edit_dialog_position=w.rect.left_top();
+                                    self.text_edit_dialog_position=w.rect.left_top(); //for moving it from a position to another
                                     let enter_pressed = ctx.input(|is| is.key_pressed(Key::Enter));
                                     let shift_pressed = ctx.input(|is| is.modifiers.shift);
                                     let exit_pressed=ctx.input(|is|is.key_pressed(Key::Escape));
@@ -927,24 +1001,24 @@ pub mod state_module{
                                         //add new line
                                         self.text = format!("{}\n", self.text);
                                     } else if enter_pressed {
+                                        //print the line
                                         self.text_edit_dialog=false;
                                         let textbox_pos = self.calculate_texture_coordinates(w.rect.left_top(), ui.available_size(), ctx.used_size(),true).unwrap();
-                                        println!("real pos: {:?}",textbox_pos);
                                         let x=self.tool_size/values_window.4;
                                         let y=self.tool_size/values_window.5;
                                         self.screenshot.draw_text(&self.text, textbox_pos.x.max(0.0), textbox_pos.y.max(0.0), self.tool_color, Scale{x,y});
                                         self.text="".to_string();
                                         self._convert_image();
                                     } else if exit_pressed {
+                                        //exit from the line
                                         self.text_edit_dialog=false;
                                         self.text="".to_string();
                                     }
-                                    println!("position: {:?}", w.rect);
-                                    println!("available: {:?}, ctx: {:?}",ui.available_size(),ctx.used_size());
                                     let textbox_pos=self.calculate_texture_coordinates(w.rect.left_top(), ui.available_size(), ctx.used_size(),true).unwrap();
-                                    println!("real pos: {:?}",textbox_pos);
                                 });
                         }
+
+                        // FUNCTIONS FOR ALL THE DRAWING MODES CENTRAL PANEL
                         if self.show_image {
                             let available=ui.available_size();
                             let mut my_image = MyImage::new();
