@@ -7,29 +7,54 @@ pub mod settings_module {
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Settings {
-        pub open: String,
         pub quick: String,
+        pub newscreenshot: String,
+        pub save: String,
+        pub pen: String,
+        pub rubber: String,
         pub path: String,
     }
     impl Default for Settings {
         fn default() -> Settings {
             Settings {
-                open: String::from("D"),
-                quick: String::from("F"),
+                quick: String::from("Q"),
+                newscreenshot: String::from("N"),
+                save: String::from("S"),
+                pen: String::from("P"),
+                rubber: String::from("R"),
                 path: String::from("./")
             }
         }
     }
     impl Settings {
 
-        pub fn get_open_hotkey(&self) -> Result<Code,Box<dyn Error>> {
-            let code_str = format!("Key{}", self.open);
+        pub fn get_quick_hotkey(&self) -> Result<Code,Box<dyn Error>> {
+            let code_str = format!("Key{}", self.quick);
             Ok(Code::from_str(&code_str)?)
         }
 
-        pub fn get_screenshot_hotkey(&self) -> Result<Code,Box<dyn Error>> {
-            let code_str = format!("Key{}", self.quick);
+        pub fn get_new_screenshot_hotkey(&self) -> Result<Code,Box<dyn Error>> {
+            let code_str = format!("Key{}", self.newscreenshot);
             Ok(Code::from_str(&code_str)?)
+        }
+
+        pub fn get_save_hotkey(&self) -> Result<Code,Box<dyn Error>> {
+            let code_str = format!("Key{}", self.save);
+            Ok(Code::from_str(&code_str)?)
+        }
+
+        pub fn get_pen_hotkey(&self) -> Result<Code,Box<dyn Error>> {
+            let code_str = format!("Key{}", self.pen);
+            Ok(Code::from_str(&code_str)?)
+        }
+
+        pub fn get_rubber_hotkey(&self) -> Result<Code,Box<dyn Error>> {
+            let code_str = format!("Key{}", self.rubber);
+            Ok(Code::from_str(&code_str)?)
+        }
+
+        pub fn get_path(&self) -> String {
+            self.path.clone()
         }
     }
 
@@ -59,7 +84,12 @@ pub mod settings_module {
         }
 
         //check if hotkey is at least 1 character long
-        if settings.open.len()<1 || settings.quick.len()<1 {
+        if settings.quick.len()<1 ||
+           settings.newscreenshot.len()<1 ||
+           settings.save.len()<1 ||
+           settings.pen.len()<1 ||
+           settings.rubber.len()<1
+           {
             let sett=Settings::default();
             serde_json::to_writer(writer, &sett)?;
             Err("Hotkey must be at least 1 character long".to_string().into())
