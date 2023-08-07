@@ -87,7 +87,7 @@ pub mod state_module{
             let startup_settings = read_settings_from_file("settings.json".to_string()).unwrap();
             let key_open = startup_settings.get_open_hotkey();
             let key_screenshot = startup_settings.get_screenshot_hotkey();
-            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_open.unwrap(),KeyType::Open).unwrap(); //OPEN APP
+            tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_open.unwrap(),KeyType::NewScreenshot).unwrap(); //OPEN APP
             tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_screenshot.unwrap(),KeyType::Quick).unwrap(); //OPEN APP
             Self {
                 timer:0,
