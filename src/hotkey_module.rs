@@ -52,7 +52,7 @@ pub mod hotkey_module{
                     Ok(hk.id())
                 },
                 KeyType::NewScreenshot=>{
-                    let bool_now=self.quick_screenshot.1;
+                    let bool_now=self.new_screenshot.1;
                     if self.new_screenshot.0.is_some() && self.new_screenshot.1 == true {
                         self.manager.unregister(self.new_screenshot.0.unwrap())?;
                     }
@@ -66,7 +66,7 @@ pub mod hotkey_module{
                     Ok(hk.id())
                 },
                 KeyType::Save=>{
-                    let bool_now=self.quick_screenshot.1;
+                    let bool_now=self.save.1;
                     if self.save.0.is_some() && self.save.1 == true {
                         self.manager.unregister(self.save.0.unwrap())?;
                     }
@@ -80,7 +80,7 @@ pub mod hotkey_module{
                     Ok(hk.id())
                 },
                 KeyType::Pen=>{
-                    let bool_now=self.quick_screenshot.1;
+                    let bool_now=self.pen.1;
                     if self.pen.0.is_some() && self.pen.1 == true {
                         self.manager.unregister(self.pen.0.unwrap())?;
                     }
@@ -94,7 +94,7 @@ pub mod hotkey_module{
                     Ok(hk.id())
                 },
                 KeyType::Rubber=>{
-                    let bool_now=self.quick_screenshot.1;
+                    let bool_now=self.rubber.1;
                     if self.rubber.0.is_some() && self.rubber.1 == true {
                         self.manager.unregister(self.rubber.0.unwrap())?;
                     }
@@ -115,35 +115,35 @@ pub mod hotkey_module{
                 KeyType::Quick=>{
                     if self.quick_screenshot.0.is_some() && self.quick_screenshot.1 == true{
                         self.manager.unregister(self.quick_screenshot.0.unwrap())?;
-                        self.quick_screenshot.1==false;
+                        self.quick_screenshot.1=false;
                     }
                     Ok(())
                 },
                 KeyType::Pen=>{
                     if self.pen.0.is_some() && self.pen.1 == true{
                         self.manager.unregister(self.pen.0.unwrap())?;
-                        self.pen.1==false;
+                        self.pen.1=false;
                     }
                     Ok(())
                 },
                 KeyType::NewScreenshot=>{
                     if self.new_screenshot.0.is_some() && self.new_screenshot.1 == true{
                         self.manager.unregister(self.new_screenshot.0.unwrap())?;
-                        self.new_screenshot.1==false;
+                        self.new_screenshot.1=false;
                     }
                     Ok(())
                 },
                 KeyType::Rubber=>{
                     if self.rubber.0.is_some() && self.rubber.1 == true{
                         self.manager.unregister(self.rubber.0.unwrap())?;
-                        self.rubber.1==false;
+                        self.rubber.1=false;
                     }
                     Ok(())
                 },
                 KeyType::Save=>{
                     if self.save.0.is_some() && self.save.1 == true{
                         self.manager.unregister(self.save.0.unwrap())?;
-                        self.save.1==false;
+                        self.save.1=false;
                     }
                     Ok(())
                 }

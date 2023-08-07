@@ -14,7 +14,7 @@ pub mod state_module{
     use global_hotkey::GlobalHotKeyEvent;
     use global_hotkey::hotkey::Modifiers;
     use rusttype::Scale;
-    use crate::hotkey_module::hotkey_module::{HotkeyManager, KeyType};
+    use crate::hotkey_module::hotkey_module::{ActiveShortcuts, HotkeyManager, KeyType};
 
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -97,7 +97,7 @@ pub mod state_module{
             tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_pen.unwrap(),KeyType::Pen).unwrap();
             tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_rubber.unwrap(),KeyType::Rubber).unwrap();
             tmp.register_new_hotkey(Some(Modifiers::CONTROL), key_save.unwrap(),KeyType::Save).unwrap();
-
+            tmp.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting).unwrap();
             Self {
                 timer:0,
                 screen:0,
@@ -707,6 +707,8 @@ pub mod state_module{
                         self.window_size=frame.info().window_info.size;
                         self.window_pos=frame.info().window_info.position.unwrap();
                         self.screenshot_taken=true;
+                        let result=self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotDone);
+                        self.manage_errors(result);
                     }
 
                     ui.separator();
@@ -907,6 +909,8 @@ pub mod state_module{
                                             Some(DrawingMode::Paint) => {
                                                 ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                                 if picker.clicked() {
+                                                    let result=self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
+                                                    self.manage_errors(result);
                                                     self.previous_drawing_mode=Some(DrawingMode::Paint);
                                                     self.drawing_mode=Some(DrawingMode::Pause);
                                                 }
@@ -914,6 +918,8 @@ pub mod state_module{
                                             Some(DrawingMode::Highlight) => {
                                                 ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                                 if picker.clicked() {
+                                                    let result=self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
+                                                    self.manage_errors(result);
                                                     self.previous_drawing_mode=Some(DrawingMode::Highlight);
                                                     self.drawing_mode=Some(DrawingMode::Pause);
                                                 }
@@ -923,18 +929,28 @@ pub mod state_module{
                                                 if ui.button("\u{25AD}").clicked() { self.shape=Some(Shape::Rectangle); }
                                                 if ui.button("\u{2B55}").clicked() { self.shape=Some(Shape::Circle); }
                                                 if picker.clicked() {
-                                                    self.previous_drawing_mode=Some(DrawingMode::Shape);
+                                                    let result=self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
+                                                    self.manage_errors(result);
+                                                    self.previous_drawing_mode=Some(DrawingMode::Text);
                                                     self.drawing_mode=Some(DrawingMode::Pause);
                                                 }
                                             },
                                             Some(DrawingMode::Text) => {
                                                 ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                                 self.drawing_mode=Some(DrawingMode::Text);
+                                                if picker.clicked() {
+                                                    let result=self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
+                                                    self.manage_errors(result);
+                                                    self.previous_drawing_mode=Some(DrawingMode::Text);
+                                                    self.drawing_mode=Some(DrawingMode::Pause);
+                                                }
                                             },
                                             Some(DrawingMode::Pause) => {
                                                 if picker.clicked_elsewhere() || ctx.input(|is|is.key_pressed(Key::Escape))
                                                 {
                                                     self.drawing_mode=self.previous_drawing_mode;
+                                                    let result=self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotDone);
+                                                    self.manage_errors(result);
                                                 }
                                             }
                                             _ => {}
@@ -1083,9 +1099,9 @@ pub mod state_module{
                                     }
                                 },
                                 Some(DrawingMode::Text)=>{
-                                    ctx.input(|ui| {
-                                        if ui.pointer.any_down() && !self.text_edit_dialog {
-                                            self.text_edit_dialog_position = ui.pointer.interact_pos().unwrap();
+                                    ctx.input(|is| {
+                                        if is.pointer.any_down() && !self.text_edit_dialog {
+                                            self.text_edit_dialog_position = is.pointer.interact_pos().unwrap();
                                             self.text_edit_dialog = true;
                                         }
                                     });

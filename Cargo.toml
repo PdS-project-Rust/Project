@@ -24,4 +24,4 @@ poll-promise = "0.2.0"
 opt-level = 3
 
 [profile.dev]
-opt-level = 2
+opt-level = 0
