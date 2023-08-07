@@ -626,7 +626,7 @@ pub mod state_module{
                                        return;
                                    }
                                    let key_quick=result.unwrap();
-                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_quick,KeyType::Rubber);
+                                   let result=self.hotkey_manager.register_new_hotkey(Some(Modifiers::CONTROL),key_quick,KeyType::Quick);
                                    self.manage_errors(result);
 
                                    self.settings_dialog=false;
