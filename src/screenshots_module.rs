@@ -294,7 +294,7 @@ pub mod screenshot_module{
             let mut dy =0;
             let lines = text.split("\n");
             for line in lines {
-                let font = Vec::from(include_bytes!("../fonts/ARIALN.TTF") as &[u8]);
+                let font = Vec::from(include_bytes!("../resources/fonts/ARIALN.TTF") as &[u8]);
                 let font = Font::try_from_vec(font).unwrap();
                 let color_rgba: [u8; 4] = [color[0], color[1], color[2], 255];
                 draw_text_mut(&mut self.screenshot,
