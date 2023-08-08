@@ -310,12 +310,10 @@ pub mod screenshot_module {
             // arrow head
             let color_pixel = Rgba::from(color);
             // calculate the direction vector of the line
-            let dx = ending_point.0 - starting_point.0;
-            let dy = ending_point.1 - starting_point.1;
+            let (dx, dy) = (ending_point.0 - starting_point.0, ending_point.1 - starting_point.1);
             let length = (dx * dx + dy * dy).sqrt();
             // calculate the normalized perpendicular vector to the line
-            let nx = dy / length;
-            let ny = -dx / length;
+            let (nx, ny) = (dy / length, -dx / length);
             // calculate the points for the arrow head triangle
             let arrow_length = size * 3.0;
             let arrow_width = size * 2.0;
