@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub mod state_module {
     use std::{error::Error, fmt::{Display, Formatter}};
     use eframe::egui::Context;
@@ -462,7 +463,7 @@ pub mod state_module {
         }
         pub fn manage_errors<E>(&mut self, result: Result<E, Box<dyn Error>>) -> Option<E> {
             match result {
-                Ok(E) => Some(E),
+                Ok(value) => Some(value),
                 Err(e) => {
                     self.previous_drawing_mode_error = self.drawing_mode;
                     self.drawing_mode = None;

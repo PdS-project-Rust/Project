@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub mod screenshot_module {
     use std::borrow::Cow;
     use std::error::Error;
