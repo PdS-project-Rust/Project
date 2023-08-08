@@ -7,7 +7,8 @@ pub mod screenshot_module{
     use arboard::{Clipboard, ImageData};
     use chrono::Local;
     use image::{DynamicImage, GenericImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
-    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect_mut, draw_text_mut, draw_hollow_circle_mut};
+    use imageproc::drawing::{draw_line_segment_mut, draw_hollow_rect_mut, draw_text_mut, draw_hollow_circle_mut, draw_polygon_mut};
+    use imageproc::point::Point;
     use imageproc::rect::Rect;
     use screenshots::Screen;
     use thiserror::Error;
@@ -288,6 +289,29 @@ pub mod screenshot_module{
             }
         }
 
+        pub fn arrow(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
+            self.screenshot = self.intermediate_image.clone();
+            self.draw_line(starting_point, ending_point, color, size);
+            let color_pixel = Rgba::from(color);
+            // calculate the direction vector of the line
+            let dx = ending_point.0 - starting_point.0;
+            let dy = ending_point.1 - starting_point.1;
+            let length = (dx * dx + dy * dy).sqrt();
+            // calculate the normalized perpendicular vector to the line
+            let nx = dy / length;
+            let ny = -dx / length;
+            // calculate the points for the arrow head triangle
+            let arrow_length = size*3.0;
+            let arrow_width = size*2.0;
+            let arrow_head = (ending_point.0, ending_point.1);
+            let arrow_tip= Point::new((ending_point.0 + arrow_length * dx / length) as i32, (ending_point.1 + arrow_length * dy / length) as i32);
+            let arrow_left = Point::new((arrow_head.0 - arrow_width * nx) as i32, (arrow_head.1 - arrow_width * ny) as i32);
+            let arrow_right = Point::new((arrow_head.0 + arrow_width * nx) as i32, (arrow_head.1 + arrow_width * ny) as i32);
+            if arrow_tip != arrow_left && arrow_tip != arrow_right {
+                let points = vec![arrow_tip, arrow_left, arrow_right];
+                draw_polygon_mut(&mut self.screenshot, points.as_slice(), color_pixel);
+            }
+        }
 
         pub fn draw_text(&mut self, text: &String, x: f32, y: f32, color: [u8; 3], scale:Scale) {
             // Load a font.

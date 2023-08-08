@@ -22,4 +22,4 @@ rusttype = "0.9.3"
 opt-level = 3
 
 [profile.dev]
-opt-level = 0
+opt-level = 2
