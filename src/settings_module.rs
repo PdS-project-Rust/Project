@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub mod settings_module {
     use std::error::Error;
     use serde::{Serialize, Deserialize};

@@ -10,6 +10,23 @@ fn build_gui() -> () {
     let icon = image::open("./resources/icon.png").expect("Failed to open icon path").to_rgba8();
     let (icon_width, icon_height) = icon.dimensions();
 
+    //FONT CONF
+    // Start with the default fonts (we will be adding to them rather than replacing them).
+    let mut fonts = egui::FontDefinitions::default();
+    //Install font (maybe supporting non-latin characters).
+    fonts.font_data.insert(
+        "Arial".to_owned(),
+        egui::FontData::from_static(include_bytes!("../resources/fonts/ARIALN.TTF")),
+    );
+    // Put my font first (highest priority) for proportional text:
+    fonts
+            .families
+            .entry(egui::FontFamily::Proportional)
+            .or_default()
+            .insert(0, "Arial".to_owned());
+
+
+
     //APP CONF
     let options = NativeOptions {
         initial_window_size: Some(egui::vec2(640.0, 400.0)),
@@ -19,6 +36,7 @@ fn build_gui() -> () {
             width: icon_width,
             height: icon_height,
         }),
+
         ..Default::default()
     };
 
@@ -28,6 +46,7 @@ fn build_gui() -> () {
         "Rusty Capture",
         options,
         Box::new(|_cc| {
+            _cc.egui_ctx.set_fonts(fonts);
             Box::<ScreenshotStr>::new(ScreenshotStr::default())
         }),
     ).unwrap();

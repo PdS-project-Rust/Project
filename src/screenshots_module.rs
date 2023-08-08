@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub mod screenshot_module {
     use std::borrow::Cow;
     use std::error::Error;
@@ -264,25 +265,24 @@ pub mod screenshot_module {
                 // based on which plane quadrant the rectangle is drawn: the first (+,+) and the third (-,-) one need a concordant increment dy, but the second (+,-) and the fourth (-,+) one need discordant increment -dy (implemented with XOR)
                 let mut dy = dx;
                 if (start.0 > end.0) ^ (start.1 > end.1) { dy = -dx }
-                // decrement-increment of starting-ending points of the diagonal so that the drawn rectangles are concentric
+                // calculate the starting point, the ending point and the dimensions of the inner smaller rectangle
                 let start = (start.0 - dx, start.1 - dy);
                 let end = (end.0 + dx, end.1 + dy);
-                // base and height of rectangle
                 let b = end.0 - start.0;
                 let h = end.1 - start.1;
-                if (start.0, start.1) > (0, 0) && (start.0, start.1) < (width, height) && (b.abs(), h.abs()) > (0, 0) {
-                    // take the top left extreme as a starting point
+                if start > (0, 0) && start < (width, height) && (b.abs(), h.abs()) > (0, 0) {
+                    // take the top left point of the rectangle computing the minimum x and y between extremes
                     let x0 = cmp::min(start.0, end.0);
                     let y0 = cmp::min(start.1, end.1);
-                    // create a specific Rect type starting from (x0,y0) of (b,h) dimensions and draw hollow rectangle
+                    // create a Rect shaped area starting from (x0,y0) of dimension (b,h) and draw the rectangle with the specific function
                     let rect = Rect::at(x0, y0).of_size(b.abs() as u32, h.abs() as u32);
                     draw_hollow_rect_mut(&mut self.screenshot, rect, color_rgba);
                 }
             }
         }
 
-        /// Draws a circle which radius is the line drawn from the center to the ending point
-        /// with a border of specified size and given color obtained by drawing a number of concentric circles equal to size
+        /// Draws a rectangle from the center to the ending point with a border of specified size and
+        /// given color obtained by drawing a number of concentric circles equal to size
         pub fn circle(&mut self, center: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
             let (width, height) = (self.screenshot.width() as i32, self.screenshot.height() as i32);
             let (x0, y0) = (center.0 as i32, center.1 as i32);
@@ -300,9 +300,14 @@ pub mod screenshot_module {
             }
         }
 
+        /// Draws an arrow pointing from the starting point to the ending point with a specific size
+        /// that modifies both the size of the head and the thickness of the body using the given color
         pub fn arrow(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
+            // save the image before any modification
             self.screenshot = self.intermediate_image.clone();
+            // arrow body
             self.draw_line(starting_point, ending_point, color, size);
+            // arrow head
             let color_pixel = Rgba::from(color);
             // calculate the direction vector of the line
             let dx = ending_point.0 - starting_point.0;
@@ -318,6 +323,7 @@ pub mod screenshot_module {
             let arrow_tip = Point::new((ending_point.0 + arrow_length * dx / length) as i32, (ending_point.1 + arrow_length * dy / length) as i32);
             let arrow_left = Point::new((arrow_head.0 - arrow_width * nx) as i32, (arrow_head.1 - arrow_width * ny) as i32);
             let arrow_right = Point::new((arrow_head.0 + arrow_width * nx) as i32, (arrow_head.1 + arrow_width * ny) as i32);
+            // draw the triangle-shaped head connecting the 3 non-collinear points calling the polygon function which fills up the bounded region
             if arrow_tip != arrow_left && arrow_tip != arrow_right {
                 let points = vec![arrow_tip, arrow_left, arrow_right];
                 draw_polygon_mut(&mut self.screenshot, points.as_slice(), color_pixel);

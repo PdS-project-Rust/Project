@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub mod hotkey_module {
     use std::error::Error;
     use global_hotkey::GlobalHotKeyManager;

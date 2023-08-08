@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub mod state_module {
     use std::{error::Error, fmt::{Display, Formatter}};
     use eframe::egui::Context;
@@ -146,7 +147,7 @@ pub mod state_module {
             self.show_image = true;
         }
 
-        pub fn _convert_image(&mut self) -> () {
+        pub fn convert_image(&mut self) -> () {
             let image = self.screenshot.get_image().unwrap();
             let size = [image.width() as _, image.height() as _];
             let image_buffer = image.to_rgba8();
@@ -425,7 +426,7 @@ pub mod state_module {
 
         fn conversion(&mut self) {
             if Instant::now() > self.instant {
-                self._convert_image();
+                self.convert_image();
                 self.instant += Duration::from_millis(16);
             }
         }
@@ -443,7 +444,7 @@ pub mod state_module {
                     1 => {
                         let duration = Duration::from_secs(self.timer as u64);
                         self.screenshot = take_screenshot(duration, self.screen);
-                        self._convert_image();
+                        self.convert_image();
                         self.show_image = true;
                         if self.image_converted {
                             self.screen_state = 2;
@@ -462,7 +463,7 @@ pub mod state_module {
         }
         pub fn manage_errors<E>(&mut self, result: Result<E, Box<dyn Error>>) -> Option<E> {
             match result {
-                Ok(E) => Some(E),
+                Ok(value) => Some(value),
                 Err(e) => {
                     self.previous_drawing_mode_error = self.drawing_mode;
                     self.drawing_mode = None;
@@ -862,7 +863,7 @@ pub mod state_module {
                                 if self.manage_errors(result).is_none() {
                                     return;
                                 }
-                                self._convert_image();
+                                self.convert_image();
                                 self.show_image = true;
                             }
 
@@ -874,7 +875,7 @@ pub mod state_module {
                                 if self.manage_errors(result).is_none() {
                                     return;
                                 }
-                                self._convert_image();
+                                self.convert_image();
                                 self.show_image = true;
                             }
 
@@ -1056,7 +1057,7 @@ pub mod state_module {
                                         let y = self.tool_size / values_window.5;
                                         self.screenshot.draw_text(&self.text, textbox_pos.x.max(0.0), textbox_pos.y.max(0.0), self.tool_color, Scale { x, y });
                                         self.text = "".to_string();
-                                        self._convert_image();
+                                        self.convert_image();
                                     } else if exit_pressed {
                                         //exit from the line
                                         self.text_edit_dialog = false;
@@ -1128,7 +1129,7 @@ pub mod state_module {
                                         if self.manage_errors(result).is_none() {
                                             self.screenshot = self.crop_screenshot_tmp.clone();
                                         }
-                                        self._convert_image();
+                                        self.convert_image();
                                     }
                                 }
                                 Some(DrawingMode::Text) => {
