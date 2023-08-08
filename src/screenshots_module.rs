@@ -146,7 +146,7 @@ pub mod screenshot_module {
             Rgba([r, g, b, a])
         }
 
-        pub fn _draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8; 4]) {
+        pub fn draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8; 4]) {
             let width = self.screenshot.width() as i32;
             let height = self.screenshot.height() as i32;
             let x = x as i32;
