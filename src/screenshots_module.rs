@@ -145,17 +145,17 @@ pub mod screenshot_module {
             Rgba([r, g, b, a])
         }
 
-        pub fn _draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8; 4]) {
-            let width = self.screenshot.width() as i32;
-            let height = self.screenshot.height() as i32;
-            let x = x as i32;
-            let y = y as i32;
+        /// Draws a single point as a full circle centered in (x0,y0) with radius r of color c
+        /// as (x,y) s.t. (x-x0)^2 + (y-y0)^2 <= r^2
+        pub fn _draw_point(&mut self, x0: f32, y0: f32, r: f32, color: [u8; 4]) {
+            let (width, height) = (self.screenshot.width() as i32, self.screenshot.height() as i32);
+            let (x, y) = (x0 as i32, y0 as i32);
             let r = r as i32;
-            if x > 0 && x < width && y > 0 && y < height {
+            if (x, y) > (0, 0) && (x, y) < (width, height) {
+                // full circles
                 for i in (x - r)..=(x + r) {
                     for j in (y - r)..=(y + r) {
-                        // Full circles
-                        if ((x - i) * (x - i) + (y - j) * (y - j)) <= r {
+                        if ((x - i) * (x - i) + (y - j) * (y - j)) <= r*r {
                             if i >= 0 && i < width && j >= 0 && j < height {
                                 let color_pixel = Rgba(color);
                                 self.screenshot.put_pixel(i as u32, j as u32, color_pixel);
@@ -166,34 +166,38 @@ pub mod screenshot_module {
             }
         }
 
+        /// Draws a line between a given starting point and an ending point with specific width and color
+        /// as a stripe of unit width lines parallel and aligned to the original line
         pub fn draw_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), color: [u8; 4], size: f32) {
             let color_pixel = Rgba::from(color);
-            // calculate the direction vector of the line
-            let dx = ending_point.0 - starting_point.0;
-            let dy = ending_point.1 - starting_point.1;
+            // direction vector of the line (dx,dy) = ((xf-x0),(yf-y0))
+            let (dx, dy) = (ending_point.0 - starting_point.0, ending_point.1 - starting_point.1);
+            // vector lenght = sqrt(dx^2+dy^2)
             let length = (dx * dx + dy * dy).sqrt();
-            // calculate the normalized perpendicular vector to the line
-            let nx = dy / length;
-            let ny = -dx / length;
-            // calculate the step size for the brush strokes
-            let step_size = 0.5;
+            // normalized perpendicular vector to the line as a 90° rotation of the direction (dx/length,dy/length)*(cos(90) sin(90), -sin(90) cos(90))
+            let (nx, ny) = (dy / length, -dx / length);
+            // fixed step size between each single drawn line and thickness proportional to size
+            let step_size = 0.25;
             let thickness = 2 * (size + 0.5) as i32;
             for i in 0..thickness {
-                // calculate the offset along the perpendicular vector
+                // calculate the offset between each line and the original one proportionally to step size
                 let offset = (i as f32 - size) * step_size;
-                // calculate the starting and ending points for each brush stroke
-                let start_x = starting_point.0 + nx * offset;
-                let start_y = starting_point.1 + ny * offset;
-                let end_x = ending_point.0 + nx * offset;
-                let end_y = ending_point.1 + ny * offset;
-                // draw the brush stroke
+                // calculate the starting and ending points for each brush stroke as a translation along the perpendicular of the offset value
+                let (start_x, start_y) = (starting_point.0 + nx * offset, starting_point.1 + ny * offset);
+                let (end_x, end_y) = (ending_point.0 + nx * offset, ending_point.1 + ny * offset);
+                // draw the brush stroke as line
                 draw_line_segment_mut(&mut self.screenshot, (start_x, start_y), (end_x, end_y), color_pixel);
             }
         }
 
+
+        /// Highlights the region between the starting point and the ending point of the given size
+        /// with four times less transparency than the maximum (alpha channel = 64/255)
+        /// as a stripe of parallel lines with the same abscissa drawn on an overlay later merged
+        /// with the original image calling the blend_colors function
         pub fn highlight_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 3]) {
-            // yellow color with transparency
-            let highlight_color = Rgba([color[0], color[1], color[2], 64]);
+            let transparency = 64;
+            let highlight_color = Rgba([color[0], color[1], color[2], transparency]);
             // create a temporary overlay image with the same size as the screenshot
             let mut overlay_image = RgbaImage::new(self.screenshot.width(), self.screenshot.height());
             // draw the highlighted stripes on the overlay image
@@ -219,20 +223,22 @@ pub mod screenshot_module {
             }
         }
 
-        pub fn erase_point(&mut self, x: f32, y: f32, r: f32) {
-            let width = self.screenshot.width() as i32;
-            let height = self.screenshot.height() as i32;
-            let (x, y) = (x as i32, y as i32);
+        /// Erases whatever modification or annotation made to the image within a circular region
+        /// centered in (x0,y0) with a radius equal to r in accordance with (x-x0)^2 + (y-y0)^2 <= r^2
+        /// restoring the corresponding portion of the original image by retrieving the pixels within
+        /// the area and pasting them on the current image
+        pub fn erase_point(&mut self, x0: f32, y0: f32, r: f32) {
+            let (width, height) = (self.screenshot.width() as i32, self.screenshot.height() as i32);
+            let (x, y) = (x0 as i32, y0 as i32);
             let r = r as i32;
-
-            if x > 0 && x < width && y > 0 && y < height {
+            // copy-paste of pixels within circle (x-x0)^2 + (y-y0)^2 <= r^2 belonging to the original image on the current one
+            if (x, y) > (0, 0) && (x, y) < (width, height) {
                 for dx in -r..r {
                     for dy in -r..r {
-                        let src_x = x + dx;
-                        let src_y = y + dy;
-                        if src_x >= 0 && src_x < width && src_y >= 0 && src_y < height {
-                            let src_pixel = self.original_image.get_pixel(src_x as u32, src_y as u32);
+                        let (src_x, src_y) = (x + dx, y + dy);
+                        if (src_x, src_y) >= (0, 0) && (src_x, src_y) < (width, height) {
                             if (dx * dx + dy * dy) <= r * r {
+                                let src_pixel = self.original_image.get_pixel(src_x as u32, src_y as u32);
                                 self.screenshot.put_pixel(src_x as u32, src_y as u32, src_pixel);
                             }
                         }
@@ -241,6 +247,8 @@ pub mod screenshot_module {
             }
         }
 
+        /// Draws a rectangle which diagonal is the line drawn from the starting point to the ending point
+        /// with a border of specified size and given color obtained by drawing a number of concentric rectangles equal to size
         pub fn rectangle(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
             let width = self.screenshot.width() as i32;
             let height = self.screenshot.height() as i32;
@@ -248,40 +256,42 @@ pub mod screenshot_module {
             let end = (ending_point.0 as i32, ending_point.1 as i32);
             let color_rgba = Rgba(color);
             let half_size = (size / 2.0) as i32;
-
+            // save the image before any modification
             self.screenshot = self.intermediate_image.clone();
-
+            // loop for concentric rectangles to emulate border thickness
             for dx in -half_size..=half_size {
+                // calculate vertical increment dy based on horizontal increment dx
+                // based on which plane quadrant the rectangle is drawn: the first (+,+) and the third (-,-) one need a concordant increment dy, but the second (+,-) and the fourth (-,+) one need discordant increment -dy (implemented with XOR)
                 let mut dy = dx;
-                if (start.0 > end.0) ^ (start.1 > end.1) { dy = -dx } // XOR
+                if (start.0 > end.0) ^ (start.1 > end.1) { dy = -dx }
+                // decrement-increment of starting-ending points of the diagonal so that the drawn rectangles are concentric
                 let start = (start.0 - dx, start.1 - dy);
                 let end = (end.0 + dx, end.1 + dy);
+                // base and height of rectangle
                 let b = end.0 - start.0;
                 let h = end.1 - start.1;
-
-                if start.0 > 0 && start.0 < width && start.1 > 0 && start.1 < height && b.abs() > 0 && h.abs() > 0 {
+                if (start.0, start.1) > (0, 0) && (start.0, start.1) < (width, height) && (b.abs(), h.abs()) > (0, 0) {
+                    // take the top left extreme as a starting point
                     let x0 = cmp::min(start.0, end.0);
                     let y0 = cmp::min(start.1, end.1);
-                    let _x1 = cmp::max(start.0, end.0);
-                    let _y1 = cmp::max(start.1, end.1);
-
+                    // create a specific Rect type starting from (x0,y0) of (b,h) dimensions and draw hollow rectangle
                     let rect = Rect::at(x0, y0).of_size(b.abs() as u32, h.abs() as u32);
                     draw_hollow_rect_mut(&mut self.screenshot, rect, color_rgba);
                 }
             }
         }
 
+        /// Draws a circle which radius is the line drawn from the center to the ending point
+        /// with a border of specified size and given color obtained by drawing a number of concentric circles equal to size
         pub fn circle(&mut self, center: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
-            let width = self.screenshot.width() as i32;
-            let height = self.screenshot.height() as i32;
+            let (width, height) = (self.screenshot.width() as i32, self.screenshot.height() as i32);
             let (x0, y0) = (center.0 as i32, center.1 as i32);
-            let (_xf, _yf) = (ending_point.0 as i32, ending_point.1 as i32);
             let radius = f32::sqrt((ending_point.0 - center.0).powf(2.0) + (ending_point.1 - center.1).powf(2.0)) as i32;
             let color_rgba = Rgba(color);
             let half_size = (size / 2.0) as i32;
-
+            // save the image before any modification
             self.screenshot = self.intermediate_image.clone();
-
+            // loop for concentric circles to emulate border thickness
             for dr in -half_size..=half_size {
                 let r = radius + dr;
                 if (x0, y0) > (0, 0) && (x0, y0) < (width, height) {
