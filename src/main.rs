@@ -4,16 +4,6 @@ mod settings_module;
 mod state_module;
 
 use eframe::{NativeOptions, egui, IconData};
-use crate::state_module::state_module::take_screenshot;
-use crate::hotkey_module::hotkey_module::{HotkeyManager, KeyType};
-use std::borrow::Cow;
-use std::path::PathBuf;
-use std::time::Duration;
-use global_hotkey::GlobalHotKeyEvent;
-use global_hotkey::hotkey::Modifiers;
-use image::ImageFormat;
-use tao::event_loop::{EventLoop,ControlFlow};
-use crate::settings_module::settings_module::*;
 use crate::state_module::state_module::ScreenshotStr;
 
 fn build_gui() -> () {

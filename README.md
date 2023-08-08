@@ -29,3 +29,5 @@ Rusty Capture is a Cross-Platform screen-grabbing and post-processing utiliy. Th
  9. ### Multi-monitor Support
     Rusty Capture can handle multiple monitors independently, allowing you to grab screens from any connected displays.
 
+# Libraries
+
