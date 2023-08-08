@@ -4,7 +4,15 @@ pub mod settings_module {
     use serde_json;
     use global_hotkey::hotkey::Code;
     use std::str::FromStr;
+    use thiserror::Error;
 
+    #[derive(Error,Debug)]
+    enum SettingsError{
+        #[error("Path is not a dir")]
+        PathError,
+        #[error("Too Short!")]
+        LengthError
+    }
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Settings {
         pub quick: String,
@@ -80,7 +88,7 @@ pub mod settings_module {
         if !std::path::Path::new(&settings.path).exists() {
             let sett=Settings::default();
             serde_json::to_writer(writer, &sett)?;
-            return Err("Path does not exist".to_string().into());
+            return Err(Box::new(SettingsError::PathError))
         }
 
         
@@ -90,15 +98,13 @@ pub mod settings_module {
            settings.save.len()<1 ||
            settings.pen.len()<1 ||
            settings.rubber.len()<1
-           {
+       {
             let sett=Settings::default();
             serde_json::to_writer(writer, &sett)?;
-
-            Err("Hotkey must be at least 1 character long".to_string().into())
-        } else {
+           Err(Box::new(SettingsError::LengthError))
+       } else {
             serde_json::to_writer(writer, settings)?;
             Ok(())
-    
         }
     }
         
