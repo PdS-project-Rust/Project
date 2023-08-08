@@ -433,7 +433,7 @@ pub mod state_module{
     }
 
     impl App for ScreenshotStr {
-        fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
             //shortcuts
             if let Ok(event) = GlobalHotKeyEvent::receiver().try_recv() {
                 //KEY_QUICK
@@ -449,10 +449,11 @@ pub mod state_module{
                 }
                 //KEY_SCREENSHOT
                 if self.hotkey_manager.get_key(KeyType::NewScreenshot).is_some() && self.hotkey_manager.get_key(KeyType::NewScreenshot).unwrap()==event.id {
-                    self.screenshot = take_screenshot(Duration::from_secs(self.timer as u64), self.screen);
-                    self._convert_image();
-                    self.show_image = true;
-                    self.screenshot_taken = true;
+                    self.window_size=frame.info().window_info.size;
+                    self.window_pos=frame.info().window_info.position.unwrap();
+                    self.screenshot_taken=true;
+                    let result=self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotDone);
+                    self.manage_errors(result);
                 }
                 //KEY_SAVE
                 if self.hotkey_manager.get_key(KeyType::Save).is_some() && self.hotkey_manager.get_key(KeyType::Save).unwrap()==event.id {
@@ -681,6 +682,8 @@ pub mod state_module{
                     });
             }
 
+            self.check_minimization(frame);
+
             // header of the app
             TopBottomPanel::top("header").frame(
                 Frame {
@@ -699,7 +702,6 @@ pub mod state_module{
                 let screen_str = format!("Screen {}", screen);
                 self.upper_panel_size=ui.available_size();
 
-                self.check_minimization(frame);
                 ui.horizontal(|ui| {
                     if ui.button("New Screenshot")
                     .on_hover_text(format!("CTRL + {}", self.settings.new_screenshot))
@@ -997,7 +999,7 @@ pub mod state_module{
                                 .movable(true)
                                 .drag_bounds(Rect::from_min_size(Pos2::new(values_window.0,values_window.1),Vec2::new(values_window.2,values_window.3)))
                                 .frame(
-                                    egui::Frame {
+                                    Frame {
                                         fill: Color32::from_rgba_unmultiplied(0, 0, 0, 50),
                                         stroke: Stroke::new(1.0, Color32::WHITE),
                                         ..Default::default()
@@ -1030,7 +1032,6 @@ pub mod state_module{
                                         self.text_edit_dialog=false;
                                         self.text="".to_string();
                                     }
-                                    let textbox_pos=self.calculate_texture_coordinates(w.rect.left_top(), ui.available_size(), ctx.used_size(),true).unwrap();
                                 });
                         }
 
