@@ -456,7 +456,7 @@ pub mod state_module{
                 }
                 //KEY_SAVE
                 if self.hotkey_manager.get_key(KeyType::Save).is_some() && self.hotkey_manager.get_key(KeyType::Save).unwrap()==event.id {
-                    if !self.saved_to_clipboard_dialog && !self.text_edit_dialog && !self.settings_dialog && !self.save_dialog{
+                    if !self.saved_to_clipboard_dialog && !self.settings_dialog && !self.save_dialog{
                         self.previous_drawing_mode=self.drawing_mode;
                         self.drawing_mode=None;
                     }
@@ -750,7 +750,7 @@ pub mod state_module{
                     if ui.button("\u{1F4BE}")
                     .on_hover_text(format!("CTRL + {}", self.settings.save))
                     .clicked() {
-                        if !self.saved_to_clipboard_dialog && !self.text_edit_dialog && !self.settings_dialog && !self.save_dialog{
+                        if !self.saved_to_clipboard_dialog && !self.settings_dialog && !self.save_dialog{
                             self.previous_drawing_mode=self.drawing_mode;
                             self.drawing_mode=None;
                         }
@@ -762,7 +762,7 @@ pub mod state_module{
 
                     // save to clipboard button
                     if ui.button("\u{1F4CB}").clicked() {
-                        let flag=!self.saved_to_clipboard_dialog && !self.text_edit_dialog && !self.settings_dialog && !self.save_dialog;
+                        let flag=!self.saved_to_clipboard_dialog && !self.settings_dialog && !self.save_dialog;
                         self.settings_dialog=false;
                         self.save_dialog=false;
                         self.text_edit_dialog=false;
@@ -779,7 +779,7 @@ pub mod state_module{
                     // settings button in the top right corner
                     ui.with_layout(Layout::top_down(Align::RIGHT), |ui| {
                         if ui.button("\u{2699}").clicked() {
-                            let flag=!self.saved_to_clipboard_dialog && !self.text_edit_dialog && !self.settings_dialog && !self.save_dialog;
+                            let flag=!self.saved_to_clipboard_dialog && !self.settings_dialog && !self.save_dialog;
                             self.saved_to_clipboard_dialog=false;
                             self.save_dialog=false;
                             self.text_edit_dialog=false;
@@ -931,7 +931,7 @@ pub mod state_module{
                                                 if picker.clicked() {
                                                     let result=self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
                                                     self.manage_errors(result);
-                                                    self.previous_drawing_mode=Some(DrawingMode::Text);
+                                                    self.previous_drawing_mode=Some(DrawingMode::Shape);
                                                     self.drawing_mode=Some(DrawingMode::Pause);
                                                 }
                                             },
@@ -1100,7 +1100,7 @@ pub mod state_module{
                                 },
                                 Some(DrawingMode::Text)=>{
                                     ctx.input(|is| {
-                                        if is.pointer.any_down() && !self.text_edit_dialog {
+                                        if is.pointer.any_down() && !self.text_edit_dialog && self.calculate_texture_coordinates(is.pointer.interact_pos().unwrap(), available,ctx.used_size(),false).is_some() {
                                             self.text_edit_dialog_position = is.pointer.interact_pos().unwrap();
                                             self.text_edit_dialog = true;
                                         }
