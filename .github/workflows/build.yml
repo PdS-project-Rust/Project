@@ -2,7 +2,7 @@ name: Build
 on:
   push:
     branches:
-      - egui_0_22_0
+      - master
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
