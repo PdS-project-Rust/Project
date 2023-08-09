@@ -148,15 +148,17 @@ pub mod screenshot_module {
 
         /// Draws a single point as a full circle centered in (x0,y0) with radius r of color c
         /// as (x,y) s.t. (x-x0)^2 + (y-y0)^2 <= r^2
-        pub fn _draw_point(&mut self, x0: f32, y0: f32, r: f32, color: [u8; 4]) {
-            let (width, height) = (self.screenshot.width() as i32, self.screenshot.height() as i32);
-            let (x, y) = (x0 as i32, y0 as i32);
+        pub fn draw_point(&mut self, x: f32, y: f32, r: f32, color: [u8; 4]) {
+            let width = self.screenshot.width() as i32;
+            let height = self.screenshot.height() as i32;
+            let x = x as i32;
+            let y = y as i32;
             let r = r as i32;
-            if (x, y) > (0, 0) && (x, y) < (width, height) {
-                // full circles
+            if x > 0 && x < width && y > 0 && y < height {
                 for i in (x - r)..=(x + r) {
                     for j in (y - r)..=(y + r) {
-                        if ((x - i) * (x - i) + (y - j) * (y - j)) <= r*r {
+                        // Full circles
+                        if ((x - i) * (x - i) + (y - j) * (y - j)) <= r {
                             if i >= 0 && i < width && j >= 0 && j < height {
                                 let color_pixel = Rgba(color);
                                 self.screenshot.put_pixel(i as u32, j as u32, color_pixel);
@@ -171,22 +173,25 @@ pub mod screenshot_module {
         /// as a stripe of unit width lines parallel and aligned to the original line
         pub fn draw_line(&mut self, starting_point: (f32, f32), ending_point: (f32, f32), color: [u8; 4], size: f32) {
             let color_pixel = Rgba::from(color);
-            // direction vector of the line (dx,dy) = ((xf-x0),(yf-y0))
-            let (dx, dy) = (ending_point.0 - starting_point.0, ending_point.1 - starting_point.1);
-            // vector lenght = sqrt(dx^2+dy^2)
+            // calculate the direction vector of the line
+            let dx = ending_point.0 - starting_point.0;
+            let dy = ending_point.1 - starting_point.1;
             let length = (dx * dx + dy * dy).sqrt();
-            // normalized perpendicular vector to the line as a 90° rotation of the direction (dx/length,dy/length)*(cos(90) sin(90), -sin(90) cos(90))
-            let (nx, ny) = (dy / length, -dx / length);
-            // fixed step size between each single drawn line and thickness proportional to size
-            let step_size = 0.25;
+            // calculate the normalized perpendicular vector to the line
+            let nx = dy / length;
+            let ny = -dx / length;
+            // calculate the step size for the brush strokes
+            let step_size = 0.5;
             let thickness = 2 * (size + 0.5) as i32;
             for i in 0..thickness {
-                // calculate the offset between each line and the original one proportionally to step size
+                // calculate the offset along the perpendicular vector
                 let offset = (i as f32 - size) * step_size;
-                // calculate the starting and ending points for each brush stroke as a translation along the perpendicular of the offset value
-                let (start_x, start_y) = (starting_point.0 + nx * offset, starting_point.1 + ny * offset);
-                let (end_x, end_y) = (ending_point.0 + nx * offset, ending_point.1 + ny * offset);
-                // draw the brush stroke as line
+                // calculate the starting and ending points for each brush stroke
+                let start_x = starting_point.0 + nx * offset;
+                let start_y = starting_point.1 + ny * offset;
+                let end_x = ending_point.0 + nx * offset;
+                let end_y = ending_point.1 + ny * offset;
+                // draw the brush stroke
                 draw_line_segment_mut(&mut self.screenshot, (start_x, start_y), (end_x, end_y), color_pixel);
             }
         }
@@ -228,18 +233,20 @@ pub mod screenshot_module {
         /// centered in (x0,y0) with a radius equal to r in accordance with (x-x0)^2 + (y-y0)^2 <= r^2
         /// restoring the corresponding portion of the original image by retrieving the pixels within
         /// the area and pasting them on the current image
-        pub fn erase_point(&mut self, x0: f32, y0: f32, r: f32) {
-            let (width, height) = (self.screenshot.width() as i32, self.screenshot.height() as i32);
-            let (x, y) = (x0 as i32, y0 as i32);
+        pub fn erase_point(&mut self, x: f32, y: f32, r: f32) {
+            let width = self.screenshot.width() as i32;
+            let height = self.screenshot.height() as i32;
+            let (x, y) = (x as i32, y as i32);
             let r = r as i32;
-            // copy-paste of pixels within circle (x-x0)^2 + (y-y0)^2 <= r^2 belonging to the original image on the current one
-            if (x, y) > (0, 0) && (x, y) < (width, height) {
+
+            if x > 0 && x < width && y > 0 && y < height {
                 for dx in -r..r {
                     for dy in -r..r {
-                        let (src_x, src_y) = (x + dx, y + dy);
-                        if (src_x, src_y) >= (0, 0) && (src_x, src_y) < (width, height) {
+                        let src_x = x + dx;
+                        let src_y = y + dy;
+                        if src_x >= 0 && src_x < width && src_y >= 0 && src_y < height {
+                            let src_pixel = self.original_image.get_pixel(src_x as u32, src_y as u32);
                             if (dx * dx + dy * dy) <= r * r {
-                                let src_pixel = self.original_image.get_pixel(src_x as u32, src_y as u32);
                                 self.screenshot.put_pixel(src_x as u32, src_y as u32, src_pixel);
                             }
                         }
@@ -270,11 +277,13 @@ pub mod screenshot_module {
                 let end = (end.0 + dx, end.1 + dy);
                 let b = end.0 - start.0;
                 let h = end.1 - start.1;
-                if start > (0, 0) && start < (width, height) && (b.abs(), h.abs()) > (0, 0) {
-                    // take the top left point of the rectangle computing the minimum x and y between extremes
+
+                if start.0 > 0 && start.0 < width && start.1 > 0 && start.1 < height && b.abs() > 0 && h.abs() > 0 {
                     let x0 = cmp::min(start.0, end.0);
                     let y0 = cmp::min(start.1, end.1);
-                    // create a Rect shaped area starting from (x0,y0) of dimension (b,h) and draw the rectangle with the specific function
+                    let _x1 = cmp::max(start.0, end.0);
+                    let _y1 = cmp::max(start.1, end.1);
+
                     let rect = Rect::at(x0, y0).of_size(b.abs() as u32, h.abs() as u32);
                     draw_hollow_rect_mut(&mut self.screenshot, rect, color_rgba);
                 }
