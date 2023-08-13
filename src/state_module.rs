@@ -462,6 +462,7 @@ pub mod state_module {
                     1 => {
                         let duration = Duration::from_secs(self.timer as u64);
                         self.screenshot = take_screenshot(duration, self.screen);
+                        self.crop_screenshot_tmp=self.screenshot.clone();
                         self.convert_image();
                         self.show_image = true;
                         if self.image_converted {
