@@ -136,6 +136,10 @@ pub mod screenshot_module {
             Ok(())
         }
 
+        pub fn delete_last_image(&mut self){
+            self.screenshot=self.intermediate_image.clone();
+        }
+
         pub fn blend_colors(background: Rgba<u8>, foreground: Rgba<u8>) -> Rgba<u8> {
             let alpha = foreground[3] as f32 / 255.0;
             let inv_alpha = 1.0 - alpha;
@@ -264,7 +268,6 @@ pub mod screenshot_module {
             let end = (ending_point.0 as i32, ending_point.1 as i32);
             let color_rgba = Rgba(color);
             let half_size = (size / 2.0) as i32;
-            // save the image before any modification
             self.screenshot = self.intermediate_image.clone();
             // loop for concentric rectangles to emulate border thickness
             for dx in -half_size..=half_size {

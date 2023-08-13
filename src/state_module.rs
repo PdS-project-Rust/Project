@@ -334,7 +334,13 @@ pub mod state_module {
                         }
                     } else {
                         self.starting_point = None;
+                        self.screenshot.delete_last_image();
+                        self.conversion();
                     }
+                } else {
+                    self.starting_point = None;
+                    self.screenshot.delete_last_image();
+                    self.conversion();
                 }
                 return None;
             });
@@ -375,7 +381,13 @@ pub mod state_module {
                         }
                     } else {
                         self.starting_point = None;
+                        self.screenshot.delete_last_image();
+                        self.conversion();
                     }
+                }else{
+                    self.starting_point = None;
+                    self.screenshot.delete_last_image();
+                    self.conversion();
                 }
             });
         }
@@ -418,7 +430,13 @@ pub mod state_module {
                         }
                     } else {
                         self.starting_point = None;
+                        self.screenshot.delete_last_image();
+                        self.conversion();
                     }
+                }else{
+                    self.starting_point = None;
+                    self.screenshot.delete_last_image();
+                    self.conversion();
                 }
                 return None;
             });
@@ -518,6 +536,9 @@ pub mod state_module {
                     self.drawing_mode = Some(DrawingMode::Erase);
                 }
             }
+
+            //DIALOGS
+
             // SAVE_DIALOG
             if self.save_dialog {
                 Window::new("Save Screenshot")
@@ -721,7 +742,6 @@ pub mod state_module {
                         });
                     });
             }
-
             self.check_minimization(frame);
 
             // header of the app
@@ -851,7 +871,7 @@ pub mod state_module {
                 )
                 .resizable(false)
                 .show(ctx, |ui| {
-                    ui.set_enabled(!self.error_dialog);
+                    ui.set_enabled(!self.error_dialog && !self.settings_dialog && !self.save_dialog);
 
                     if self.show_image {
                         ui.horizontal(|ui| {
@@ -1021,7 +1041,6 @@ pub mod state_module {
                         // TEXT EDIT DIALOG
                         if self.text_edit_dialog {
                             //text edit window without titlebar
-                            println!("coordinate: {:?}", self.text_edit_dialog_position);
                             Window::new("TextEdit")
                                 .current_pos(self.text_edit_dialog_position)
                                 .title_bar(false)
