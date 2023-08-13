@@ -136,7 +136,7 @@ pub mod screenshot_module {
             Ok(())
         }
 
-        pub fn delete_last_image(&mut self){
+        pub fn rollback_changes(&mut self){
             self.screenshot=self.intermediate_image.clone();
         }
 

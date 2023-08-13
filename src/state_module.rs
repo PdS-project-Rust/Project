@@ -334,12 +334,12 @@ pub mod state_module {
                         }
                     } else {
                         self.starting_point = None;
-                        self.screenshot.delete_last_image();
+                        self.screenshot.rollback_changes();
                         self.conversion();
                     }
                 } else {
                     self.starting_point = None;
-                    self.screenshot.delete_last_image();
+                    self.screenshot.rollback_changes();
                     self.conversion();
                 }
                 return None;
@@ -381,12 +381,12 @@ pub mod state_module {
                         }
                     } else {
                         self.starting_point = None;
-                        self.screenshot.delete_last_image();
+                        self.screenshot.rollback_changes();
                         self.conversion();
                     }
                 }else{
                     self.starting_point = None;
-                    self.screenshot.delete_last_image();
+                    self.screenshot.rollback_changes();
                     self.conversion();
                 }
             });
@@ -430,12 +430,12 @@ pub mod state_module {
                         }
                     } else {
                         self.starting_point = None;
-                        self.screenshot.delete_last_image();
+                        self.screenshot.rollback_changes();
                         self.conversion();
                     }
                 }else{
                     self.starting_point = None;
-                    self.screenshot.delete_last_image();
+                    self.screenshot.rollback_changes();
                     self.conversion();
                 }
                 return None;
@@ -463,6 +463,7 @@ pub mod state_module {
                         let duration = Duration::from_secs(self.timer as u64);
                         self.screenshot = take_screenshot(duration, self.screen);
                         self.crop_screenshot_tmp=self.screenshot.clone();
+                        self.starting_point=None;
                         self.convert_image();
                         self.show_image = true;
                         if self.image_converted {
@@ -520,9 +521,14 @@ pub mod state_module {
                 //KEY_SAVE
                 if self.hotkey_manager.get_key(KeyType::Save).is_some() && self.hotkey_manager.get_key(KeyType::Save).unwrap() == event.id {
                     if !self.saved_to_clipboard_dialog && !self.settings_dialog && !self.save_dialog {
+                        if self.drawing_mode == Some(DrawingMode::Crop){
+                            self.screenshot.rollback_changes();
+                            self.conversion();
+                        }
                         self.previous_drawing_mode = self.drawing_mode;
                         self.drawing_mode = None;
                     }
+                    self.starting_point=None;
                     self.saved_to_clipboard_dialog = false;
                     self.text_edit_dialog = false;
                     self.settings_dialog = false;
@@ -530,10 +536,20 @@ pub mod state_module {
                 }
                 //KEY_PEN
                 if self.hotkey_manager.get_key(KeyType::Pen).is_some() && self.hotkey_manager.get_key(KeyType::Pen).unwrap() == event.id {
+                    if self.drawing_mode == Some(DrawingMode::Crop){
+                        self.screenshot.rollback_changes();
+                        self.conversion();
+                    }
+                    self.starting_point=None;
                     self.drawing_mode = Some(DrawingMode::Paint);
                 }
                 //KEY_RUBBER
                 if self.hotkey_manager.get_key(KeyType::Rubber).is_some() && self.hotkey_manager.get_key(KeyType::Rubber).unwrap() == event.id {
+                    if self.drawing_mode == Some(DrawingMode::Crop){
+                        self.screenshot.rollback_changes();
+                        self.conversion();
+                    }
+                    self.starting_point=None;
                     self.drawing_mode = Some(DrawingMode::Erase);
                 }
             }
