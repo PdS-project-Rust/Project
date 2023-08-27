@@ -168,7 +168,7 @@ pub mod state_module {
             let h_window = available.y;
             let aspect_ratio = w / h;
             let height = h_window.min(w_window / aspect_ratio);
-            let width = height * w / h;
+            let width = height * aspect_ratio;
             let h_scale = height / h;
             let w_scale = width / w;
             let image_pos_x = (total_window.x - width) / 2.0;
