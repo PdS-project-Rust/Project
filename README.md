@@ -31,3 +31,15 @@ Rusty Capture is a Cross-Platform screen-grabbing and post-processing utiliy. Th
 
 # Libraries
 
+1.  eframe = "0.22.0" for the GUI
+2.  arboard = "3.2.0" for saving the image to clipboard
+3. chrono = "0.4.26" time library (required for the screenshot name)
+4. global-hotkey = "0.2.3" hotkeys library 
+5. image = "0.24.6" DynamicImage library, it's the main structure for saving and manipulating the image inside this program
+6. screenshots = "0.7.0" Screenshot library
+7. thiserror = "1.0.43" Error library, used inside the modules for creating custom-made errors
+8. serde = { version = "1.0", features = ["derive"] } serializing library, used for writing settings
+9. serde_json = "1.0"
+10. imageproc = "0.23.0" Extension of the image library, used for creating lines, polygons etc inside the DynamicImage
+11. rusttype = "0.9.3" Font Library
+
