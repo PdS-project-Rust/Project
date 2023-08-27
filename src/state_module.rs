@@ -446,7 +446,7 @@ pub mod state_module {
         fn conversion(&mut self) {
             if Instant::now() > self.instant {
                 self.convert_image();
-                self.instant += Duration::from_millis(16);
+                self.instant += Duration::from_millis(4);
             }
         }
 
@@ -482,6 +482,7 @@ pub mod state_module {
                 }
             }
         }
+
         pub fn manage_errors<E>(&mut self, result: Result<E, Box<dyn Error>>) -> Option<E> {
             match result {
                 Ok(value) => Some(value),

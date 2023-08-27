@@ -185,8 +185,9 @@ pub mod screenshot_module {
             let nx = dy / length;
             let ny = -dx / length;
             // calculate the step size for the brush strokes
-            let step_size = 0.5;
-            let thickness = 2 * (size + 0.5) as i32;
+            let factor = 6.0;
+            let step_size = 1.0 / factor;
+            let thickness = (factor as i32) * (size + 0.5) as i32;
             for i in 0..thickness {
                 // calculate the offset along the perpendicular vector
                 let offset = (i as f32 - size) * step_size;
