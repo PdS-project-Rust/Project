@@ -474,7 +474,8 @@ pub mod state_module {
                     2 => {
                         frame.set_window_pos(self.window_pos);
                         frame.set_window_size(self.window_size);
-
+                        let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotDone);
+                        self.manage_errors(result);
                         self.screen_state = 0;
                         self.screenshot_taken = false;
                     }
@@ -516,13 +517,13 @@ pub mod state_module {
                     self.window_size = frame.info().window_info.size;
                     self.window_pos = frame.info().window_info.position.unwrap();
                     self.screenshot_taken = true;
-                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotDone);
+                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
                     self.manage_errors(result);
                 }
                 //KEY_SAVE
                 if self.hotkey_manager.get_key(KeyType::Save).is_some() && self.hotkey_manager.get_key(KeyType::Save).unwrap() == event.id {
                     if !self.saved_to_clipboard_dialog && !self.settings_dialog && !self.save_dialog {
-                        if self.drawing_mode == Some(DrawingMode::Crop){
+                        if self.drawing_mode == Some(DrawingMode::Crop) || self.drawing_mode == Some(DrawingMode::Shape){
                             self.screenshot.rollback_changes();
                             self.conversion();
                         }
@@ -786,7 +787,7 @@ pub mod state_module {
                         self.window_size = frame.info().window_info.size;
                         self.window_pos = frame.info().window_info.position.unwrap();
                         self.screenshot_taken = true;
-                        let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotDone);
+                        let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
                         self.manage_errors(result);
                     }
 
@@ -984,7 +985,7 @@ pub mod state_module {
                                             Some(DrawingMode::Paint) => {
                                                 ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                                 if picker.clicked() {
-                                                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
+                                                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
                                                     self.manage_errors(result);
                                                     self.previous_drawing_mode = Some(DrawingMode::Paint);
                                                     self.drawing_mode = Some(DrawingMode::Pause);
@@ -993,7 +994,7 @@ pub mod state_module {
                                             Some(DrawingMode::Highlight) => {
                                                 ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                                 if picker.clicked() {
-                                                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
+                                                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
                                                     self.manage_errors(result);
                                                     self.previous_drawing_mode = Some(DrawingMode::Highlight);
                                                     self.drawing_mode = Some(DrawingMode::Pause);
@@ -1005,7 +1006,7 @@ pub mod state_module {
                                                 if ui.button("\u{2B55}").clicked() { self.shape = Some(Shape::Circle); }
                                                 if ui.button("\u{2197}").clicked() { self.shape = Some(Shape::Arrow); }
                                                 if picker.clicked() {
-                                                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
+                                                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
                                                     self.manage_errors(result);
                                                     self.previous_drawing_mode = Some(DrawingMode::Shape);
                                                     self.drawing_mode = Some(DrawingMode::Pause);
@@ -1015,7 +1016,7 @@ pub mod state_module {
                                                 ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
                                                 self.drawing_mode = Some(DrawingMode::Text);
                                                 if picker.clicked() {
-                                                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::ScreenshotWaiting);
+                                                    let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
                                                     self.manage_errors(result);
                                                     self.previous_drawing_mode = Some(DrawingMode::Text);
                                                     self.drawing_mode = Some(DrawingMode::Pause);
