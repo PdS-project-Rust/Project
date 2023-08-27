@@ -166,7 +166,8 @@ pub mod state_module {
             //x is 640 out of 640, y is 356 out of 400 (-22*2 equal to borders+top and bottom)
             let w_window = available.x;
             let h_window = available.y;
-            let height = h_window.min(w_window * h / w);
+            let aspect_ratio = w / h;
+            let height = h_window.min(w_window / aspect_ratio);
             let width = height * w / h;
             let h_scale = height / h;
             let w_scale = width / w;
