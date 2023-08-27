@@ -185,7 +185,7 @@ pub mod screenshot_module {
             let nx = dy / length;
             let ny = -dx / length;
             // calculate the step size for the brush strokes
-            let factor = 8.0;
+            let factor = 10.0;
             let step_size = 1.0 / factor;
             let thickness = (factor / 2.0) as i32 * (size + 0.5) as i32;
             for i in 0..thickness {
