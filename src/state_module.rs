@@ -446,7 +446,7 @@ pub mod state_module {
         fn conversion(&mut self) {
             if Instant::now() > self.instant {
                 self.convert_image();
-                self.instant += Duration::from_millis(4);
+                self.instant += Duration::from_millis(5);
             }
         }
 
