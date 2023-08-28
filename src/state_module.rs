@@ -984,7 +984,7 @@ pub mod state_module {
                                         let picker = ui.color_edit_button_srgb(&mut self.tool_color).clone();
                                         match self.drawing_mode {
                                             Some(DrawingMode::Paint) => {
-                                                ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                                ui.add(Slider::new(&mut self.tool_size, 3.0..=50.0));
                                                 if picker.clicked() {
                                                     let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
                                                     self.manage_errors(result);
@@ -993,7 +993,7 @@ pub mod state_module {
                                                 }
                                             }
                                             Some(DrawingMode::Highlight) => {
-                                                ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                                ui.add(Slider::new(&mut self.tool_size, 3.0..=50.0));
                                                 if picker.clicked() {
                                                     let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
                                                     self.manage_errors(result);
@@ -1002,7 +1002,7 @@ pub mod state_module {
                                                 }
                                             }
                                             Some(DrawingMode::Shape) => {
-                                                ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                                ui.add(Slider::new(&mut self.tool_size, 3.0..=50.0));
                                                 if ui.button("\u{25AD}").clicked() { self.shape = Some(Shape::Rectangle); }
                                                 if ui.button("\u{2B55}").clicked() { self.shape = Some(Shape::Circle); }
                                                 if ui.button("\u{2197}").clicked() { self.shape = Some(Shape::Arrow); }
@@ -1014,7 +1014,7 @@ pub mod state_module {
                                                 }
                                             }
                                             Some(DrawingMode::Text) => {
-                                                ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                                ui.add(Slider::new(&mut self.tool_size, 3.0..=50.0));
                                                 self.drawing_mode = Some(DrawingMode::Text);
                                                 if picker.clicked() {
                                                     let result = self.hotkey_manager.set_active_shortcuts(ActiveShortcuts::Pause);
@@ -1037,7 +1037,7 @@ pub mod state_module {
                                         //without color picker (Crop,Erase,None)
                                         match self.drawing_mode {
                                             Some(DrawingMode::Erase) => {
-                                                ui.add(Slider::new(&mut self.tool_size, 1.0..=50.0));
+                                                ui.add(Slider::new(&mut self.tool_size, 3.0..=50.0));
                                             }
                                             _ => {}
                                         }

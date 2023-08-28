@@ -297,23 +297,28 @@ pub mod screenshot_module {
         /// Draws a rectangle from the center to the ending point with a border of specified size and
         /// given color obtained by drawing a number of concentric circles equal to size
         pub fn circle(&mut self, center: (f32, f32), ending_point: (f32, f32), size: f32, color: [u8; 4]) {
-            let (width, height) = (self.screenshot.width() as i32, self.screenshot.height() as i32);
-            let ( mut x0, mut y0) = (center.0 as i32, center.1 as i32);
-            let mut radius = f32::sqrt((ending_point.0 - center.0).powf(2.0) + (ending_point.1 - center.1).powf(2.0)) as i32;
+            let times = 2;
+            let (width, height) = (self.screenshot.width() as i32 - times, self.screenshot.height() as i32 - times);
+            let (mut x0, mut y0) = (center.0 as i32, center.1 as i32);
+            let mut radius = f32::sqrt((ending_point.0 - center.0).powf(2.0) + (ending_point.1 - center.1).powf(2.0)) as i32 - times;
             let color_rgba = Rgba(color);
             let half_size = (size / 2.0) as i32;
-            let times = 2;
             // save the image before any modification
             self.screenshot = self.intermediate_image.clone();
             // loop for concentric circles to emulate border thickness
             for i in 0..times {
                 for dr in -half_size..=half_size {
-                    let r = radius + dr - times;
+                    let r = radius + dr;
                     if (x0, y0) > (0, 0) && (x0, y0) < (width, height) {
-                        draw_hollow_circle_mut(&mut self.screenshot, (x0-times, y0-times), r, color_rgba);
+                        draw_hollow_circle_mut(&mut self.screenshot, (x0, y0), r, color_rgba);
                     }
                 }
-                (x0, y0) = (x0 + 1, y0 + 1);
+                if i == 0 {
+                    x0 = x0 + 1;
+                }
+                else if i == 1 {
+                    y0 = y0 + 1;
+                }
                 radius = radius + 1;
             }
         }
